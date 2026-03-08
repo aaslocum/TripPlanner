@@ -56,7 +56,8 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\)[''data'']; print\\(''airbnb_url:'', d.get\\(''airbnb_url''\\)\\)\")",
       "Bash(curl -s -X PUT http://localhost:3000/api/accommodations/4 -H \"Content-Type: application/json\" -d \"{\"\"airbnb_id\"\":\"\"1408108755256927160\"\",\"\"airbnb_url\"\":\"\"https://www.airbnb.com/rooms/1408108755256927160\"\",\"\"description\"\":\"\"Cabin in Shenandoah\"\",\"\"address\"\":\"\"Shenandoah\"\",\"\"check_in_datetime\"\":\"\"2026-04-17T15:00\"\",\"\"check_out_datetime\"\":\"\"2026-04-20T11:00\"\",\"\"total_cost\"\":2876}\")",
       "Bash(node src/db/migrations/runner.js)",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d\\)\")",
+      "Bash(taskkill //PID 261944 //F)"
     ]
   }
 }

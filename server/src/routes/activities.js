@@ -24,25 +24,25 @@ router.get('/:id', async (req, res) => {
 
 // Create activity
 router.post('/', adminMiddleware, async (req, res) => {
-  const { trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost } = req.body;
+  const { trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url } = req.body;
   const db = await getDb();
   const result = run(db, `
-    INSERT INTO activities (trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `, [trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost]);
+    INSERT INTO activities (trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address || null, latitude || null, longitude || null, rating || null, source_url || null]);
   const activity = get(db, 'SELECT * FROM activities WHERE activity_id = ?', [result.lastInsertRowid]);
   res.status(201).json({ success: true, data: activity });
 });
 
 // Update activity
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost } = req.body;
+  const { title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url } = req.body;
   const db = await getDb();
   run(db, `
     UPDATE activities SET title = ?, description = ?, image_url = ?, google_place_id = ?,
-    start_datetime = ?, end_datetime = ?, estimated_cost = ?
+    start_datetime = ?, end_datetime = ?, estimated_cost = ?, address = ?, latitude = ?, longitude = ?, rating = ?, source_url = ?
     WHERE activity_id = ?
-  `, [title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, req.params.id]);
+  `, [title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address || null, latitude || null, longitude || null, rating || null, source_url || null, req.params.id]);
   const activity = get(db, 'SELECT * FROM activities WHERE activity_id = ?', [req.params.id]);
   res.json({ success: true, data: activity });
 });

@@ -101,6 +101,58 @@ const PLATFORMS = {
       return data;
     },
   },
+
+  google_maps: {
+    name: 'Google Maps',
+    match: (url) => /share\.google\/|google\.[a-z.]+\/maps\//.test(url),
+
+    extractFromHtml(html, url) {
+      const data = {};
+
+      // Title from <title> tag, strip " - Google Maps" suffix
+      const titleMatch = html.match(/<title>([^<]*)<\/title>/i);
+      if (titleMatch) {
+        data.title = decodeHtmlEntities(titleMatch[1].replace(/\s*[-–]\s*Google\s+Maps\s*$/i, '').trim());
+      }
+
+      // OG image
+      const ogImage = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]*)"/)
+        || html.match(/<meta\s+content="([^"]*)"\s+(?:property|name)="og:image"/);
+      if (ogImage) data.image_url = ogImage[1];
+
+      // OG description
+      const ogDesc = html.match(/<meta\s+(?:property|name)="og:description"\s+content="([^"]*)"/)
+        || html.match(/<meta\s+content="([^"]*)"\s+(?:property|name)="og:description"/);
+      if (ogDesc) data.description = decodeHtmlEntities(ogDesc[1]);
+
+      // Coordinates from URL @lat,lng pattern
+      const coordMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (coordMatch) {
+        data.latitude = parseFloat(coordMatch[1]);
+        data.longitude = parseFloat(coordMatch[2]);
+      }
+
+      // Address from structured data in page
+      const addressMatch = html.match(/"address"\s*:\s*"([^"]+)"/);
+      if (addressMatch) data.address = decodeHtmlEntities(addressMatch[1]);
+
+      // Rating
+      const ratingMatch = html.match(/"rating"\s*:\s*(\d+\.?\d*)/);
+      if (ratingMatch) data.rating = parseFloat(ratingMatch[1]);
+
+      // Try to get address from the page title if not found yet
+      // Google Maps titles often follow: "Place Name · Address"
+      if (!data.address && data.title) {
+        const parts = data.title.split(/\s*[·|]\s*/);
+        if (parts.length > 1) {
+          data.address = parts.slice(1).join(', ').trim();
+          data.title = parts[0].trim();
+        }
+      }
+
+      return data;
+    },
+  },
 };
 
 // Map Airbnb bed type names to our schema bed types
@@ -249,7 +301,7 @@ export function detectPlatform(url) {
 export async function scrapeListing(url) {
   const platform = detectPlatform(url);
   if (!platform) {
-    throw new Error('Unsupported platform. Currently only Airbnb URLs are supported.');
+    throw new Error('Unsupported platform. Currently Airbnb and Google Maps URLs are supported.');
   }
 
   const rules = PLATFORMS[platform];
@@ -269,7 +321,8 @@ export async function scrapeListing(url) {
   }
 
   const html = await response.text();
-  const data = rules.extractFromHtml(html, url);
+  const finalUrl = response.url || url;
+  const data = rules.extractFromHtml(html, finalUrl);
 
   return {
     platform: rules.name,

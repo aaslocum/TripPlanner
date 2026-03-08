@@ -18,6 +18,7 @@ import bedRoutes from './routes/beds.js';
 import activityRoutes from './routes/activities.js';
 import imageRoutes from './routes/images.js';
 import scrapeRoutes from './routes/scrape.js';
+import bedroomClaimRoutes from './routes/bedroomClaims.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/beds', bedRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/scrape', scrapeRoutes);
+app.use('/api/bedroom-claims', bedroomClaimRoutes);
 
 // Serve client in production
 if (config.nodeEnv === 'production') {

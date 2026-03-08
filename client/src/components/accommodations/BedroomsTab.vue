@@ -28,6 +28,13 @@ const bedroomPrices = computed(() => {
   return prices;
 });
 
+const numberOfNights = computed(() => {
+  const ci = props.accommodation.check_in_datetime;
+  const co = props.accommodation.check_out_datetime;
+  if (!ci || !co) return 0;
+  return Math.max(1, Math.round((new Date(co) - new Date(ci)) / 86400000));
+});
+
 function formatPrice(amount) {
   if (!amount && amount !== 0) return '';
   return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -88,11 +95,41 @@ async function deleteBedroom(id) {
   emit('refresh');
 }
 
+// Room claiming
+function confirmedClaims(bedroom) {
+  return (bedroom.claims || []).filter(c => c.status === 'confirmed');
+}
+function pendingClaims(bedroom) {
+  return (bedroom.claims || []).filter(c => c.status === 'requested');
+}
+function hasUserClaimed(bedroom) {
+  const uid = authStore.activeUser?.user_id;
+  return (bedroom.claims || []).some(c => c.user_id === uid);
+}
+
+async function requestRoom(bedroomId) {
+  await apiClient.post('/bedroom-claims', {
+    bedroom_id: bedroomId,
+    user_id: authStore.activeUser.user_id,
+  });
+  emit('refresh');
+}
+
+async function confirmClaim(claimId) {
+  await apiClient.put(`/bedroom-claims/${claimId}/confirm`);
+  emit('refresh');
+}
+
+async function removeClaim(claimId) {
+  await apiClient.delete(`/bedroom-claims/${claimId}`);
+  emit('refresh');
+}
+
 const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
 </script>
 
 <template>
-  <div>
+  <div class="max-w-[900px]">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900">Bedrooms</h3>
       <button v-if="authStore.isAdmin" @click="showForm = !showForm" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
@@ -150,25 +187,50 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
           <div class="flex items-start justify-between">
             <h4 class="text-base font-semibold text-gray-900">{{ bedroom.name }}</h4>
             <div class="flex items-center gap-2">
-              <span v-if="bedroomPrices[bedroom.bedroom_id]" class="text-base font-semibold text-gray-900">
-                {{ formatPrice(bedroomPrices[bedroom.bedroom_id]) }}
-              </span>
+              <div v-if="bedroomPrices[bedroom.bedroom_id]" class="text-right">
+                <span class="text-base font-semibold text-gray-900">{{ formatPrice(bedroomPrices[bedroom.bedroom_id]) }}</span>
+                <div v-if="numberOfNights > 0" class="text-xs text-gray-400">{{ formatPrice(bedroomPrices[bedroom.bedroom_id] / numberOfNights) }}/night</div>
+              </div>
               <button v-if="authStore.isAdmin" @click="deleteBedroom(bedroom.bedroom_id)" class="text-red-400 hover:text-red-600 text-xs ml-2">Remove</button>
             </div>
           </div>
 
           <p class="text-sm text-gray-500 mt-1">{{ bedSummary(bedroom) }}</p>
 
-          <!-- Assigned users -->
-          <div v-if="bedroom.beds?.some(b => b.first_name)" class="flex flex-wrap gap-2 mt-3">
+          <!-- Room claims -->
+          <div class="flex flex-wrap gap-2 mt-3">
+            <!-- Confirmed occupants -->
             <span
-              v-for="bed in bedroom.beds.filter(b => b.first_name)"
-              :key="bed.bed_id"
-              class="inline-flex items-center gap-1.5 border border-gray-300 rounded-md px-2.5 py-1 text-sm text-gray-700"
+              v-for="claim in confirmedClaims(bedroom)"
+              :key="claim.claim_id"
+              class="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-md px-2.5 py-1 text-sm text-green-800"
             >
-              {{ bed.first_name }} {{ bed.last_name }}
-              <span class="text-xs text-gray-400">Assigned</span>
+              {{ claim.first_name }} {{ claim.last_name }}
+              <span class="text-xs text-green-500">Confirmed</span>
+              <button v-if="authStore.isAdmin" @click="removeClaim(claim.claim_id)" class="text-green-400 hover:text-red-500 ml-1">&times;</button>
             </span>
+            <!-- Pending requests (admin sees all, user sees own) -->
+            <span
+              v-for="claim in pendingClaims(bedroom)"
+              :key="claim.claim_id"
+              class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1 text-sm text-amber-800"
+            >
+              {{ claim.first_name }} {{ claim.last_name }}
+              <span class="text-xs text-amber-500">Pending</span>
+              <template v-if="authStore.isAdmin">
+                <button @click="confirmClaim(claim.claim_id)" class="text-green-600 hover:text-green-800 text-xs font-medium ml-1">Confirm</button>
+                <button @click="removeClaim(claim.claim_id)" class="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
+              </template>
+              <button v-else-if="claim.user_id === authStore.activeUser?.user_id" @click="removeClaim(claim.claim_id)" class="text-amber-400 hover:text-red-500 ml-1">&times;</button>
+            </span>
+            <!-- Request button -->
+            <button
+              v-if="!hasUserClaimed(bedroom)"
+              @click="requestRoom(bedroom.bedroom_id)"
+              class="inline-flex items-center gap-1 border border-dashed border-indigo-300 rounded-md px-2.5 py-1 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              + Request Room
+            </button>
           </div>
 
           <div class="mt-auto pt-3 flex items-center gap-4">
