@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue';
+import { watch } from 'vue';
 import { useAuthStore } from './stores/auth';
 import { useTripStore } from './stores/trip';
 import AppHeader from './components/layout/AppHeader.vue';
@@ -8,12 +8,12 @@ import AppSidebar from './components/layout/AppSidebar.vue';
 const authStore = useAuthStore();
 const tripStore = useTripStore();
 
-onMounted(async () => {
-  await authStore.fetchCurrentUser();
-  if (authStore.isAuthenticated) {
+// Fetch trips when user becomes authenticated
+watch(() => authStore.isAuthenticated, async (isAuth) => {
+  if (isAuth) {
     await tripStore.fetchTrips();
   }
-});
+}, { immediate: true });
 </script>
 
 <template>
@@ -22,7 +22,7 @@ onMounted(async () => {
       <AppHeader />
       <div class="flex">
         <AppSidebar />
-        <main class="flex-1 p-6 ml-56">
+        <main class="flex-1 p-6 ml-56 mt-16">
           <router-view />
         </main>
       </div>

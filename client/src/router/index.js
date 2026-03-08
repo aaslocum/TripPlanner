@@ -58,6 +58,9 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
+  // Ensure auth is initialized before any guard logic
+  await authStore.initialize();
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
   } else if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {

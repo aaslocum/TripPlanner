@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware, adminMiddleware, selfOnlyMiddleware } from '../middleware/auth.js';
 import { getDb, all, get, run } from '../db/connection.js';
+import { encryptBudget, decryptBudget } from '../services/encryption.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -59,6 +60,35 @@ router.delete('/:id', adminMiddleware, async (req, res) => {
   res.json({ success: true, data: null });
 });
 
-// Budget endpoints will be added in Phase 7
+// Get own budget (self only)
+router.get('/:id/budget', selfOnlyMiddleware, async (req, res) => {
+  const db = await getDb();
+  const user = get(db, 'SELECT budget_encrypted FROM users WHERE user_id = ?', [req.params.id]);
+  if (!user) return res.status(404).json({ success: false, error: { message: 'User not found' } });
+
+  if (!user.budget_encrypted) {
+    return res.json({ success: true, data: { budget: null } });
+  }
+
+  const budget = decryptBudget(user.budget_encrypted);
+  res.json({ success: true, data: { budget } });
+});
+
+// Update own budget (self only)
+router.put('/:id/budget', selfOnlyMiddleware, async (req, res) => {
+  const { budget } = req.body;
+  const db = await getDb();
+
+  if (budget === null || budget === undefined || budget === '') {
+    run(db, 'UPDATE users SET budget_encrypted = NULL, updated_at = datetime("now") WHERE user_id = ?',
+      [req.params.id]);
+  } else {
+    const encrypted = encryptBudget(String(budget));
+    run(db, 'UPDATE users SET budget_encrypted = ?, updated_at = datetime("now") WHERE user_id = ?',
+      [encrypted, req.params.id]);
+  }
+
+  res.json({ success: true, data: { budget: budget || null } });
+});
 
 export default router;

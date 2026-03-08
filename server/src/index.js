@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import passport from 'passport';
 import config from './config/env.js';
+import { configurePassport } from './config/passport.js';
 import { getDb, saveDb } from './db/connection.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
@@ -15,6 +17,7 @@ import bedroomRoutes from './routes/bedrooms.js';
 import bedRoutes from './routes/beds.js';
 import activityRoutes from './routes/activities.js';
 import imageRoutes from './routes/images.js';
+import scrapeRoutes from './routes/scrape.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -25,8 +28,10 @@ app.use(cors({ origin: config.clientUrl, credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Initialize DB before starting
+// Initialize DB and Passport
 await getDb();
+configurePassport();
+app.use(passport.initialize());
 
 // Save DB after each mutation request
 app.use((req, res, next) => {
@@ -49,6 +54,7 @@ app.use('/api/bedrooms', bedroomRoutes);
 app.use('/api/beds', bedRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api/scrape', scrapeRoutes);
 
 // Serve client in production
 if (config.nodeEnv === 'production') {

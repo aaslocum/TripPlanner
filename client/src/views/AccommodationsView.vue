@@ -15,6 +15,28 @@ const loading = ref(false);
 const showForm = ref(false);
 const form = ref({ description: '', address: '', airbnb_id: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' });
 
+// Airbnb URL scraping
+const airbnbUrl = ref('');
+const scraping = ref(false);
+const scrapeError = ref('');
+
+async function scrapeUrl() {
+  if (!airbnbUrl.value.trim()) return;
+  scraping.value = true;
+  scrapeError.value = '';
+  try {
+    const { data } = await apiClient.post('/scrape', { url: airbnbUrl.value.trim() });
+    const d = data.data;
+    if (d.description) form.value.description = d.description;
+    if (d.address) form.value.address = d.address;
+    if (d.airbnb_id) form.value.airbnb_id = d.airbnb_id;
+  } catch (err) {
+    scrapeError.value = err.response?.data?.error || 'Failed to fetch listing details';
+  } finally {
+    scraping.value = false;
+  }
+}
+
 const tabs = [
   { id: 'living', label: 'Living Space' },
   { id: 'bedrooms', label: 'Bedrooms' },
@@ -50,6 +72,8 @@ async function saveAccommodation() {
   await apiClient.post('/accommodations', payload);
   showForm.value = false;
   form.value = { description: '', address: '', airbnb_id: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' };
+  airbnbUrl.value = '';
+  scrapeError.value = '';
   await fetchAccommodations();
 }
 
@@ -68,6 +92,32 @@ onMounted(fetchAccommodations);
 
     <!-- Add form -->
     <div v-if="showForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <!-- Airbnb URL paste section -->
+      <div class="mb-5 pb-5 border-b border-gray-200">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Paste Airbnb Link</label>
+        <div class="flex gap-2">
+          <input
+            v-model="airbnbUrl"
+            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            placeholder="https://www.airbnb.com/rooms/..."
+            @keyup.enter="scrapeUrl"
+          />
+          <button
+            @click="scrapeUrl"
+            :disabled="scraping || !airbnbUrl.trim()"
+            class="bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+          >
+            <svg v-if="scraping" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {{ scraping ? 'Fetching...' : 'Auto-fill' }}
+          </button>
+        </div>
+        <p v-if="scrapeError" class="text-xs text-red-500 mt-1">{{ scrapeError }}</p>
+        <p class="text-xs text-gray-400 mt-1">Paste an Airbnb URL to auto-populate fields below</p>
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>

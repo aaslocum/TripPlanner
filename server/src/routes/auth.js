@@ -1,8 +1,9 @@
 import { Router } from 'express';
+import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import config from '../config/env.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { getDb, get } from '../db/connection.js';
+import { getDb, get, saveDb } from '../db/connection.js';
 
 const router = Router();
 
@@ -23,6 +24,25 @@ router.get('/dev-login', async (req, res) => {
   res.json({ success: true, data: { token, user } });
 });
 
-// Google OAuth routes will be added in Phase 6
+// Google OAuth - redirect to Google
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  session: false,
+}));
+
+// Google OAuth - callback
+router.get('/google/callback', passport.authenticate('google', {
+  session: false,
+  failureRedirect: `${config.clientUrl}/login?error=auth_failed`,
+}), (req, res) => {
+  const user = req.user;
+  const token = jwt.sign(
+    { sub: user.user_id, email: user.email, role: user.role },
+    config.jwtSecret,
+    { expiresIn: '24h' }
+  );
+  saveDb();
+  res.redirect(`${config.clientUrl}/auth/callback?token=${token}`);
+});
 
 export default router;

@@ -14,7 +14,11 @@
       "Bash(lsof -ti:3000)",
       "Bash(xargs kill -9)",
       "Bash(taskkill //F //FI \"IMAGENAME eq node.exe\")",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx vite --host)",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq *node*\")",
+      "Bash(npx kill-port 3000 5173)"
     ]
   }
 }
