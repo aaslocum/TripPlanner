@@ -5,7 +5,11 @@
       "Bash(npm --version)",
       "Bash(npm install)",
       "Bash(npm run db:migrate)",
-      "Bash(npm run db:seed)"
+      "Bash(npm run db:seed)",
+      "Bash(node -e \":*)",
+      "Bash(npm run db:reset)",
+      "Bash(node src/db/migrations/runner.js --reset)",
+      "Bash(node src/db/seed.js)"
     ]
   }
 }

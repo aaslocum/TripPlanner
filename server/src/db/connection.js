@@ -21,7 +21,7 @@ export async function getDb() {
 
   if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
+    db = new SQL.Database(new Uint8Array(fileBuffer));
   } else {
     db = new SQL.Database();
   }
