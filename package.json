@@ -1,0 +1,20 @@
+{
+  "name": "trip-planner",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:auth": "concurrently \"npm run dev:server:auth\" \"npm run dev:client\"",
+    "dev:server": "cd server && cross-env AUTH_BYPASS=true npm run dev",
+    "dev:server:auth": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "db:migrate": "cd server && node src/db/migrations/runner.js",
+    "db:seed": "cd server && node src/db/seed.js",
+    "db:reset": "cd server && node src/db/migrations/runner.js --reset && node src/db/seed.js",
+    "build": "cd client && npm run build",
+    "start": "cd server && node src/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3"
+  }
+}
