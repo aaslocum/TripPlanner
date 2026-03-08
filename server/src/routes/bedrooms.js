@@ -31,6 +31,35 @@ router.post('/', adminMiddleware, async (req, res) => {
   res.status(201).json({ success: true, data: bedroom });
 });
 
+// Upsert bedroom by name (used by scraper auto-populate)
+router.post('/upsert', adminMiddleware, async (req, res) => {
+  const { accommodation_id, name, price_share_adjustment } = req.body;
+  const db = await getDb();
+  const existing = get(db,
+    'SELECT * FROM bedrooms WHERE accommodation_id = ? AND name = ?',
+    [accommodation_id, name]);
+
+  let bedroom;
+  if (existing) {
+    // Update existing — keep price_share_adjustment if not provided
+    if (price_share_adjustment !== undefined) {
+      run(db, 'UPDATE bedrooms SET price_share_adjustment = ? WHERE bedroom_id = ?',
+        [price_share_adjustment, existing.bedroom_id]);
+    }
+    // Delete existing beds so they get re-created from scrape
+    run(db, 'DELETE FROM beds WHERE bedroom_id = ?', [existing.bedroom_id]);
+    // Delete existing bedroom images so they get re-created
+    run(db, 'DELETE FROM accommodation_images WHERE bedroom_id = ?', [existing.bedroom_id]);
+    bedroom = get(db, 'SELECT * FROM bedrooms WHERE bedroom_id = ?', [existing.bedroom_id]);
+  } else {
+    const result = run(db,
+      'INSERT INTO bedrooms (accommodation_id, name, price_share_adjustment) VALUES (?, ?, ?)',
+      [accommodation_id, name, price_share_adjustment || 0]);
+    bedroom = get(db, 'SELECT * FROM bedrooms WHERE bedroom_id = ?', [result.lastInsertRowid]);
+  }
+  res.status(200).json({ success: true, data: bedroom });
+});
+
 // Update bedroom
 router.put('/:id', adminMiddleware, async (req, res) => {
   const { name, price_share_adjustment } = req.body;

@@ -25,6 +25,23 @@ router.post('/', adminMiddleware, async (req, res) => {
   res.status(201).json({ success: true, data: image });
 });
 
+// Bulk add images
+router.post('/bulk', adminMiddleware, async (req, res) => {
+  const { images } = req.body;
+  if (!Array.isArray(images) || images.length === 0) {
+    return res.status(400).json({ success: false, error: { message: 'images array is required' } });
+  }
+  const db = await getDb();
+  let count = 0;
+  for (const img of images) {
+    run(db,
+      'INSERT INTO accommodation_images (accommodation_id, bedroom_id, image_url, sort_order) VALUES (?, ?, ?, ?)',
+      [img.accommodation_id, img.bedroom_id || null, img.image_url, img.sort_order || count]);
+    count++;
+  }
+  res.status(201).json({ success: true, data: { added: count } });
+});
+
 // Delete image
 router.delete('/:id', adminMiddleware, async (req, res) => {
   const db = await getDb();

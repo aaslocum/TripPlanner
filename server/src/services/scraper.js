@@ -127,28 +127,47 @@ function mapBedType(airbnbType) {
 }
 
 /**
- * Extract bedroom info from the sleeping arrangement HTML section.
- * Looks for <li data-key="Bedroom N"> elements containing bed descriptions.
+ * Extract bedroom info from the sleeping arrangement data.
+ * Airbnb embeds arrangementDetails as inline JSON with RoomArrangementItem objects.
  */
 function extractBedrooms(html) {
   const bedrooms = [];
 
-  // Match each bedroom list item: data-key="Bedroom N" ... name ... beds
-  const bedroomPattern = /<li[^>]*data-key="(Bedroom \d+)"[^>]*>([\s\S]*?)<\/li>/gi;
-  let match;
-  while ((match = bedroomPattern.exec(html)) !== null) {
-    const name = match[1];
-    const content = match[2];
+  // Look for arrangementDetails JSON array in the HTML
+  const idx = html.indexOf('"arrangementDetails"');
+  if (idx === -1) return bedrooms;
 
-    // Extract bed description from _et7v9p6 class div
-    const bedDescMatch = content.match(/<div class="_et7v9p6">(.*?)<\/div>/);
-    if (!bedDescMatch) continue;
+  try {
+    // Find the opening bracket of the array
+    const start = html.indexOf('[', idx);
+    if (start === -1) return bedrooms;
 
-    const bedDesc = decodeHtmlEntities(bedDescMatch[1]);
-    const beds = parseBedDescription(bedDesc);
+    // Find matching closing bracket by counting depth
+    let depth = 0;
+    let end = start;
+    for (let i = start; i < html.length && i < start + 50000; i++) {
+      if (html[i] === '[') depth++;
+      if (html[i] === ']') depth--;
+      if (depth === 0) { end = i + 1; break; }
+    }
 
-    bedrooms.push({ name, bed_description: bedDesc, beds });
-  }
+    const details = JSON.parse(html.substring(start, end));
+    for (const item of details) {
+      if (item.title && item.subtitle) {
+        const beds = parseBedDescription(item.subtitle);
+        const bedroom = {
+          name: item.title,
+          bed_description: item.subtitle,
+          beds,
+        };
+        // Extract bedroom image from arrangementDetails
+        if (item.images?.length) {
+          bedroom.image_url = item.images[0].baseUrl;
+        }
+        bedrooms.push(bedroom);
+      }
+    }
+  } catch { /* skip if parse fails */ }
 
   return bedrooms;
 }

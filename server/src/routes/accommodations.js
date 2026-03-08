@@ -28,9 +28,12 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN users u ON b.assigned_user_id = u.user_id
       WHERE b.bedroom_id = ?
     `, [bedroom.bedroom_id]);
+    bedroom.images = all(db,
+      'SELECT * FROM accommodation_images WHERE bedroom_id = ? ORDER BY sort_order',
+      [bedroom.bedroom_id]);
   }
 
-  const images = all(db, 'SELECT * FROM accommodation_images WHERE accommodation_id = ? ORDER BY sort_order',
+  const images = all(db, 'SELECT * FROM accommodation_images WHERE accommodation_id = ? AND bedroom_id IS NULL ORDER BY sort_order',
     [req.params.id]);
 
   res.json({ success: true, data: { ...acc, bedrooms, images } });

@@ -6,14 +6,27 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     token: localStorage.getItem('token') || null,
     initialized: false,
+    impersonating: null,
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.user,
-    isAdmin: (state) => state.user?.role === 'admin',
+    isRealAdmin: (state) => state.user?.role === 'admin',
+    isAdmin: (state) => {
+      if (state.impersonating) return state.impersonating.role === 'admin';
+      return state.user?.role === 'admin';
+    },
+    activeUser: (state) => state.impersonating || state.user,
+    isImpersonating: (state) => !!state.impersonating,
   },
 
   actions: {
+    impersonate(user) {
+      this.impersonating = user;
+    },
+    stopImpersonating() {
+      this.impersonating = null;
+    },
     async initialize() {
       if (this.initialized) return;
       try {

@@ -63,7 +63,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
-  } else if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next('/');
   } else if (to.meta.guest && authStore.isAuthenticated) {
     next('/');
