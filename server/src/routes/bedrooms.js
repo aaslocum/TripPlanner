@@ -60,12 +60,14 @@ router.post('/upsert', adminMiddleware, async (req, res) => {
   res.status(200).json({ success: true, data: bedroom });
 });
 
-// Update bedroom
+// Update bedroom (partial — only updates fields that are provided)
 router.put('/:id', adminMiddleware, async (req, res) => {
   const { name, price_share_adjustment } = req.body;
   const db = await getDb();
+  const existing = get(db, 'SELECT * FROM bedrooms WHERE bedroom_id = ?', [req.params.id]);
+  if (!existing) return res.status(404).json({ success: false, error: { message: 'Not found' } });
   run(db, 'UPDATE bedrooms SET name = ?, price_share_adjustment = ? WHERE bedroom_id = ?',
-    [name, price_share_adjustment, req.params.id]);
+    [name !== undefined ? name : existing.name, price_share_adjustment !== undefined ? price_share_adjustment : existing.price_share_adjustment, req.params.id]);
   const bedroom = get(db, 'SELECT * FROM bedrooms WHERE bedroom_id = ?', [req.params.id]);
   res.json({ success: true, data: bedroom });
 });

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import apiClient from '../../api/client';
 
@@ -10,15 +10,70 @@ const props = defineProps({
 const emit = defineEmits(['refresh']);
 
 const showForm = ref(false);
-const form = ref({ name: '', price_share_adjustment: 0 });
+const form = ref({ name: '' });
+const imageIndices = ref({});
+
+// Price calculation: weighted share of total_cost
+// Each bedroom gets weight = 10 + adjustment. Price = total * (weight / sumWeights)
+const bedroomPrices = computed(() => {
+  const bedrooms = props.accommodation.bedrooms || [];
+  const totalCost = props.accommodation.total_cost || 0;
+  if (!bedrooms.length || !totalCost) return {};
+  const weights = bedrooms.map(b => 10 + (b.price_share_adjustment || 0));
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const prices = {};
+  bedrooms.forEach((b, i) => {
+    prices[b.bedroom_id] = totalWeight > 0 ? (totalCost * weights[i] / totalWeight) : 0;
+  });
+  return prices;
+});
+
+function formatPrice(amount) {
+  if (!amount && amount !== 0) return '';
+  return `$${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function currentIndex(bedroom) {
+  return imageIndices.value[bedroom.bedroom_id] || 0;
+}
+
+function prevImage(bedroom) {
+  const total = bedroom.images?.length || 0;
+  if (total <= 1) return;
+  const cur = currentIndex(bedroom);
+  imageIndices.value[bedroom.bedroom_id] = (cur - 1 + total) % total;
+}
+
+function nextImage(bedroom) {
+  const total = bedroom.images?.length || 0;
+  if (total <= 1) return;
+  const cur = currentIndex(bedroom);
+  imageIndices.value[bedroom.bedroom_id] = (cur + 1) % total;
+}
+
+function bedSummary(bedroom) {
+  const counts = {};
+  for (const bed of bedroom.beds || []) {
+    const t = bed.bed_type;
+    counts[t] = (counts[t] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .map(([type, count]) => `${count} ${type.charAt(0).toUpperCase() + type.slice(1)} bed${count > 1 ? 's' : ''}`)
+    .join(', ') || 'No beds';
+}
+
+async function updateAdjustment(bedroom, value) {
+  const adj = Number(value);
+  bedroom.price_share_adjustment = adj;
+  await apiClient.put(`/bedrooms/${bedroom.bedroom_id}`, { price_share_adjustment: adj });
+}
 
 async function addBedroom() {
   await apiClient.post('/bedrooms', {
     accommodation_id: props.accommodation.accommodation_id,
     name: form.value.name,
-    price_share_adjustment: Number(form.value.price_share_adjustment) || 0,
   });
-  form.value = { name: '', price_share_adjustment: 0 };
+  form.value = { name: '' };
   showForm.value = false;
   emit('refresh');
 }
@@ -51,43 +106,96 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
           <label class="block text-sm font-medium text-gray-700 mb-1">Room Name</label>
           <input v-model="form.name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Master Bedroom" />
         </div>
-        <div class="w-40">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Price Adj ($)</label>
-          <input v-model="form.price_share_adjustment" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
         <button @click="addBedroom" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
       </div>
     </div>
 
-    <div v-if="accommodation.bedrooms?.length" class="grid grid-cols-2 gap-4">
-      <div v-for="bedroom in accommodation.bedrooms" :key="bedroom.bedroom_id" class="bg-gray-50 rounded-lg overflow-hidden">
-        <img v-if="bedroom.images?.length" :src="bedroom.images[0].image_url" class="w-full h-36 object-cover" />
-        <div class="p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="font-medium text-gray-900">{{ bedroom.name }}</h4>
+    <div v-if="accommodation.bedrooms?.length" class="space-y-4">
+      <div
+        v-for="bedroom in accommodation.bedrooms"
+        :key="bedroom.bedroom_id"
+        class="flex border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white"
+      >
+        <!-- Image carousel -->
+        <div class="relative w-60 h-48 shrink-0 bg-gray-100">
+          <img
+            v-if="bedroom.images?.length"
+            :src="bedroom.images[currentIndex(bedroom)]?.image_url"
+            class="w-full h-full object-cover"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
+            </svg>
+          </div>
+          <!-- Carousel arrows -->
+          <template v-if="bedroom.images?.length > 1">
+            <button
+              @click.stop="prevImage(bedroom)"
+              class="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button
+              @click.stop="nextImage(bedroom)"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </template>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 p-5 flex flex-col">
+          <div class="flex items-start justify-between">
+            <h4 class="text-base font-semibold text-gray-900">{{ bedroom.name }}</h4>
             <div class="flex items-center gap-2">
-              <span v-if="bedroom.price_share_adjustment" class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                {{ bedroom.price_share_adjustment > 0 ? '+' : '' }}${{ bedroom.price_share_adjustment }}
+              <span v-if="bedroomPrices[bedroom.bedroom_id]" class="text-base font-semibold text-gray-900">
+                {{ formatPrice(bedroomPrices[bedroom.bedroom_id]) }}
               </span>
-              <button v-if="authStore.isAdmin" @click="deleteBedroom(bedroom.bedroom_id)" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+              <button v-if="authStore.isAdmin" @click="deleteBedroom(bedroom.bedroom_id)" class="text-red-400 hover:text-red-600 text-xs ml-2">Remove</button>
             </div>
           </div>
 
-          <div class="space-y-2">
-            <div v-for="bed in bedroom.beds" :key="bed.bed_id" class="flex items-center justify-between bg-white rounded-md px-3 py-2 text-sm">
-              <span class="capitalize">{{ bed.bed_type }}</span>
-              <span v-if="bed.first_name" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                {{ bed.first_name }} {{ bed.last_name }}
-              </span>
-              <span v-else class="text-xs text-gray-400">Unassigned</span>
-            </div>
+          <p class="text-sm text-gray-500 mt-1">{{ bedSummary(bedroom) }}</p>
+
+          <!-- Assigned users -->
+          <div v-if="bedroom.beds?.some(b => b.first_name)" class="flex flex-wrap gap-2 mt-3">
+            <span
+              v-for="bed in bedroom.beds.filter(b => b.first_name)"
+              :key="bed.bed_id"
+              class="inline-flex items-center gap-1.5 border border-gray-300 rounded-md px-2.5 py-1 text-sm text-gray-700"
+            >
+              {{ bed.first_name }} {{ bed.last_name }}
+              <span class="text-xs text-gray-400">Assigned</span>
+            </span>
           </div>
 
-          <div v-if="authStore.isAdmin" class="mt-2">
-            <select @change="addBed(bedroom.bedroom_id, $event.target.value); $event.target.value = ''" class="text-xs border border-gray-300 rounded px-2 py-1 text-gray-500">
-              <option value="">+ Add bed...</option>
-              <option v-for="bt in bedTypes" :key="bt" :value="bt">{{ bt }}</option>
-            </select>
+          <div class="mt-auto pt-3 flex items-center gap-4">
+            <!-- Admin: price adjustment slider -->
+            <div v-if="authStore.isAdmin" class="flex items-center gap-2">
+              <label class="text-xs text-gray-400 whitespace-nowrap">Price adj:</label>
+              <input
+                type="range"
+                min="-10"
+                max="10"
+                step="1"
+                :value="bedroom.price_share_adjustment || 0"
+                @change="updateAdjustment(bedroom, $event.target.value)"
+                class="w-24 h-1 accent-indigo-600"
+              />
+              <span class="text-xs font-mono w-6 text-center" :class="(bedroom.price_share_adjustment || 0) > 0 ? 'text-red-500' : (bedroom.price_share_adjustment || 0) < 0 ? 'text-green-600' : 'text-gray-400'">
+                {{ (bedroom.price_share_adjustment || 0) > 0 ? '+' : '' }}{{ bedroom.price_share_adjustment || 0 }}
+              </span>
+            </div>
+
+            <!-- Admin: add bed -->
+            <div v-if="authStore.isAdmin">
+              <select @change="addBed(bedroom.bedroom_id, $event.target.value); $event.target.value = ''" class="text-xs border border-gray-300 rounded px-2 py-1 text-gray-500">
+                <option value="">+ Add bed...</option>
+                <option v-for="bt in bedTypes" :key="bt" :value="bt">{{ bt }}</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

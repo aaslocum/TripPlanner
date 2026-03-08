@@ -5,7 +5,7 @@ import { useTripStore } from '../stores/trip';
 import apiClient from '../api/client';
 
 const authStore = useAuthStore();
-import LivingSpaceTab from '../components/accommodations/LivingSpaceTab.vue';
+import OverviewTab from '../components/accommodations/OverviewTab.vue';
 import BedroomsTab from '../components/accommodations/BedroomsTab.vue';
 import AmenitiesTab from '../components/accommodations/AmenitiesTab.vue';
 import LocationTab from '../components/accommodations/LocationTab.vue';
@@ -18,7 +18,7 @@ const activeTab = ref('living');
 const loading = ref(false);
 const showForm = ref(false);
 const editingId = ref(null); // null = create, number = editing
-const form = ref({ description: '', address: '', airbnb_id: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' });
+const form = ref({ description: '', address: '', airbnb_id: '', airbnb_url: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' });
 
 // Airbnb URL scraping
 const airbnbUrl = ref('');
@@ -29,7 +29,7 @@ const scrapedImages = ref([]);
 const scrapeSuccess = ref(false);
 
 function resetForm() {
-  form.value = { description: '', address: '', airbnb_id: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' };
+  form.value = { description: '', address: '', airbnb_id: '', airbnb_url: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' };
   airbnbUrl.value = '';
   scrapeError.value = '';
   scrapeSuccess.value = false;
@@ -49,6 +49,7 @@ function openEditForm(acc) {
     description: acc.description || '',
     address: acc.address || '',
     airbnb_id: acc.airbnb_id || '',
+    airbnb_url: acc.airbnb_url || '',
     check_in_datetime: acc.check_in_datetime || '',
     check_out_datetime: acc.check_out_datetime || '',
     total_cost: acc.total_cost || '',
@@ -83,6 +84,7 @@ async function scrapeUrl() {
     if (d.check_out) form.value.check_out_datetime = d.check_out + 'T11:00';
     if (d.bedrooms?.length) scrapedBedrooms.value = d.bedrooms;
     if (d.images?.length) scrapedImages.value = d.images;
+    form.value.airbnb_url = airbnbUrl.value.trim();
     scrapeSuccess.value = true;
   } catch (err) {
     scrapeError.value = err.response?.data?.error || 'Failed to fetch listing details';
@@ -92,7 +94,7 @@ async function scrapeUrl() {
 }
 
 const tabs = [
-  { id: 'living', label: 'Living Space' },
+  { id: 'living', label: 'Overview' },
   { id: 'bedrooms', label: 'Bedrooms' },
   { id: 'amenities', label: 'Amenities' },
   { id: 'location', label: 'Location' },
@@ -338,7 +340,7 @@ onMounted(fetchAccommodations);
       </div>
 
       <div class="p-6">
-        <LivingSpaceTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" />
+        <OverviewTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" />
         <BedroomsTab v-if="activeTab === 'bedrooms'" :accommodation="selectedAccommodation" @refresh="selectAccommodation(selectedAccommodation.accommodation_id)" />
         <AmenitiesTab v-if="activeTab === 'amenities'" :accommodation="selectedAccommodation" />
         <LocationTab v-if="activeTab === 'location'" :accommodation="selectedAccommodation" />

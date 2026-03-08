@@ -41,25 +41,25 @@ router.get('/:id', async (req, res) => {
 
 // Create accommodation
 router.post('/', adminMiddleware, async (req, res) => {
-  const { trip_id, airbnb_id, description, address, check_in_datetime, check_out_datetime, total_cost } = req.body;
+  const { trip_id, airbnb_id, airbnb_url, description, address, check_in_datetime, check_out_datetime, total_cost } = req.body;
   const db = await getDb();
   const result = run(db, `
-    INSERT INTO accommodations (trip_id, airbnb_id, description, address, check_in_datetime, check_out_datetime, total_cost)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [trip_id, airbnb_id, description, address, check_in_datetime, check_out_datetime, total_cost]);
+    INSERT INTO accommodations (trip_id, airbnb_id, airbnb_url, description, address, check_in_datetime, check_out_datetime, total_cost)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [trip_id, airbnb_id, airbnb_url || null, description, address, check_in_datetime, check_out_datetime, total_cost]);
   const acc = get(db, 'SELECT * FROM accommodations WHERE accommodation_id = ?', [result.lastInsertRowid]);
   res.status(201).json({ success: true, data: acc });
 });
 
 // Update accommodation
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { airbnb_id, description, address, check_in_datetime, check_out_datetime, total_cost } = req.body;
+  const { airbnb_id, airbnb_url, description, address, check_in_datetime, check_out_datetime, total_cost } = req.body;
   const db = await getDb();
   run(db, `
-    UPDATE accommodations SET airbnb_id = ?, description = ?, address = ?,
+    UPDATE accommodations SET airbnb_id = ?, airbnb_url = ?, description = ?, address = ?,
     check_in_datetime = ?, check_out_datetime = ?, total_cost = ?
     WHERE accommodation_id = ?
-  `, [airbnb_id, description, address, check_in_datetime, check_out_datetime, total_cost, req.params.id]);
+  `, [airbnb_id, airbnb_url, description, address, check_in_datetime, check_out_datetime, total_cost, req.params.id]);
   const acc = get(db, 'SELECT * FROM accommodations WHERE accommodation_id = ?', [req.params.id]);
   res.json({ success: true, data: acc });
 });
