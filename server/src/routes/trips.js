@@ -77,6 +77,40 @@ router.post('/:tripId/members', adminMiddleware, async (req, res) => {
   res.status(201).json({ success: true, data: null });
 });
 
+// Bulk add members - accepts array of {email, first_name?, last_name?}
+// Creates users that don't exist, adds all as trip members
+router.post('/:tripId/members/bulk', adminMiddleware, async (req, res) => {
+  const { entries } = req.body;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return res.status(400).json({ success: false, error: { message: 'entries array is required' } });
+  }
+
+  const db = await getDb();
+  const results = [];
+
+  for (const entry of entries) {
+    if (!entry.email) continue;
+    const email = entry.email.trim().toLowerCase();
+
+    // Find or create user
+    let user = get(db, 'SELECT * FROM users WHERE LOWER(email) = ?', [email]);
+    if (!user) {
+      const result = run(db,
+        'INSERT INTO users (first_name, last_name, email, role) VALUES (?, ?, ?, ?)',
+        [entry.first_name || '', entry.last_name || '', email, 'user']);
+      user = get(db, 'SELECT * FROM users WHERE user_id = ?', [result.lastInsertRowid]);
+    }
+
+    // Add as trip member (ignore if already a member)
+    run(db, 'INSERT OR IGNORE INTO trip_members (trip_id, user_id) VALUES (?, ?)',
+      [req.params.tripId, user.user_id]);
+
+    results.push({ user_id: user.user_id, email: user.email, first_name: user.first_name, last_name: user.last_name });
+  }
+
+  res.status(201).json({ success: true, data: { added: results.length, members: results } });
+});
+
 // Remove member from trip
 router.delete('/:tripId/members/:userId', adminMiddleware, async (req, res) => {
   const db = await getDb();

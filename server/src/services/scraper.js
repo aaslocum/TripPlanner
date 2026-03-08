@@ -20,6 +20,15 @@ const PLATFORMS = {
       // Extract listing ID from URL
       data.airbnb_id = this.extractListingId(url) || '';
 
+      // Extract check-in/check-out from URL query params
+      try {
+        const parsed = new URL(url);
+        const checkIn = parsed.searchParams.get('check_in');
+        const checkOut = parsed.searchParams.get('check_out');
+        if (checkIn) data.check_in = checkIn;   // YYYY-MM-DD
+        if (checkOut) data.check_out = checkOut;
+      } catch { /* skip */ }
+
       // OG meta tags (reliably present for SEO/social sharing)
       const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/)
         || html.match(/<meta\s+content="([^"]*)"\s+property="og:title"/);
@@ -70,24 +79,100 @@ const PLATFORMS = {
         } catch { /* skip if parse fails */ }
       }
 
-      // Extract multiple images from the page
+      // Extract listing images (filter to actual property photos, not UI assets)
       const images = [];
-      // Look for high-res Airbnb image URLs in the HTML
-      const imgMatches = html.matchAll(/https:\/\/a0\.muscache\.com\/im\/pictures\/[^"'\s)]+/g);
+      const imgMatches = html.matchAll(/https:\/\/a0\.muscache\.com\/im\/pictures\/hosting\/Hosting-[^"'\s)]+\/original\/[^"'\s)]+/g);
       const seen = new Set();
       for (const m of imgMatches) {
-        const imgUrl = m[0];
-        if (!seen.has(imgUrl) && images.length < 20) {
-          seen.add(imgUrl);
-          images.push(imgUrl);
+        // Clean up HTML entities in URL
+        const imgUrl = decodeHtmlEntities(m[0]);
+        // Use original quality URL (strip resize params)
+        const cleanUrl = imgUrl.replace(/\?.*$/, '');
+        if (!seen.has(cleanUrl) && images.length < 20) {
+          seen.add(cleanUrl);
+          images.push(cleanUrl);
         }
       }
       if (images.length > 0) data.images = images;
+
+      // Extract bedrooms from sleeping arrangement section
+      data.bedrooms = extractBedrooms(html);
 
       return data;
     },
   },
 };
+
+// Map Airbnb bed type names to our schema bed types
+const BED_TYPE_MAP = {
+  'king': 'king',
+  'queen': 'queen',
+  'single': 'twin',
+  'twin': 'twin',
+  'double': 'full',
+  'full': 'full',
+  'sofa': 'sofa',
+  'sofa bed': 'sofa',
+  'couch': 'sofa',
+  'bunk': 'bunk',
+  'bunk bed': 'bunk',
+};
+
+function mapBedType(airbnbType) {
+  const lower = airbnbType.toLowerCase().trim();
+  for (const [key, value] of Object.entries(BED_TYPE_MAP)) {
+    if (lower.includes(key)) return value;
+  }
+  return 'queen'; // fallback
+}
+
+/**
+ * Extract bedroom info from the sleeping arrangement HTML section.
+ * Looks for <li data-key="Bedroom N"> elements containing bed descriptions.
+ */
+function extractBedrooms(html) {
+  const bedrooms = [];
+
+  // Match each bedroom list item: data-key="Bedroom N" ... name ... beds
+  const bedroomPattern = /<li[^>]*data-key="(Bedroom \d+)"[^>]*>([\s\S]*?)<\/li>/gi;
+  let match;
+  while ((match = bedroomPattern.exec(html)) !== null) {
+    const name = match[1];
+    const content = match[2];
+
+    // Extract bed description from _et7v9p6 class div
+    const bedDescMatch = content.match(/<div class="_et7v9p6">(.*?)<\/div>/);
+    if (!bedDescMatch) continue;
+
+    const bedDesc = decodeHtmlEntities(bedDescMatch[1]);
+    const beds = parseBedDescription(bedDesc);
+
+    bedrooms.push({ name, bed_description: bedDesc, beds });
+  }
+
+  return bedrooms;
+}
+
+/**
+ * Parse bed description like "1 king bed, 2 single beds" into structured data.
+ */
+function parseBedDescription(desc) {
+  const beds = [];
+  // Split by comma: "1 king bed, 2 single beds"
+  const parts = desc.split(',').map(s => s.trim());
+  for (const part of parts) {
+    // Match pattern: "N type bed(s)"
+    const m = part.match(/(\d+)\s+(.+?)\s+beds?/i);
+    if (m) {
+      const count = parseInt(m[1]);
+      const type = mapBedType(m[2]);
+      for (let i = 0; i < count; i++) {
+        beds.push({ bed_type: type });
+      }
+    }
+  }
+  return beds;
+}
 
 /**
  * Walk through __NEXT_DATA__ to find listing details.

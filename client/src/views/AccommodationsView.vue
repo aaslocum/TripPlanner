@@ -6,6 +6,7 @@ import LivingSpaceTab from '../components/accommodations/LivingSpaceTab.vue';
 import BedroomsTab from '../components/accommodations/BedroomsTab.vue';
 import AmenitiesTab from '../components/accommodations/AmenitiesTab.vue';
 import LocationTab from '../components/accommodations/LocationTab.vue';
+import AttendeesTab from '../components/accommodations/AttendeesTab.vue';
 
 const tripStore = useTripStore();
 const accommodations = ref([]);
@@ -30,6 +31,9 @@ async function scrapeUrl() {
     if (d.description) form.value.description = d.description;
     if (d.address) form.value.address = d.address;
     if (d.airbnb_id) form.value.airbnb_id = d.airbnb_id;
+    // Auto-fill check-in/check-out from URL query params (YYYY-MM-DD → datetime-local format)
+    if (d.check_in) form.value.check_in_datetime = d.check_in + 'T15:00';
+    if (d.check_out) form.value.check_out_datetime = d.check_out + 'T11:00';
   } catch (err) {
     scrapeError.value = err.response?.data?.error || 'Failed to fetch listing details';
   } finally {
@@ -42,6 +46,7 @@ const tabs = [
   { id: 'bedrooms', label: 'Bedrooms' },
   { id: 'amenities', label: 'Amenities' },
   { id: 'location', label: 'Location' },
+  { id: 'attendees', label: 'Attendees' },
 ];
 
 async function fetchAccommodations() {
@@ -181,6 +186,7 @@ onMounted(fetchAccommodations);
         <BedroomsTab v-if="activeTab === 'bedrooms'" :accommodation="selectedAccommodation" @refresh="selectAccommodation(selectedAccommodation.accommodation_id)" />
         <AmenitiesTab v-if="activeTab === 'amenities'" :accommodation="selectedAccommodation" />
         <LocationTab v-if="activeTab === 'location'" :accommodation="selectedAccommodation" />
+        <AttendeesTab v-if="activeTab === 'attendees'" />
       </div>
     </div>
 
