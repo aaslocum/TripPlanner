@@ -9,7 +9,12 @@
       "Bash(node -e \":*)",
       "Bash(npm run db:reset)",
       "Bash(node src/db/migrations/runner.js --reset)",
-      "Bash(node src/db/seed.js)"
+      "Bash(node src/db/seed.js)",
+      "Bash(npx kill-port 3000)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill -9)",
+      "Bash(taskkill //F //FI \"IMAGENAME eq node.exe\")",
+      "Bash(kill %1)"
     ]
   }
 }
