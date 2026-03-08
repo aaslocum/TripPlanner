@@ -2,6 +2,7 @@
   "name": "trip-planner",
   "private": true,
   "scripts": {
+    "postinstall": "npm install --prefix server && npm install --prefix client",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:auth": "concurrently \"npm run dev:server:auth\" \"npm run dev:client\"",
     "dev:server": "cd server && cross-env AUTH_BYPASS=true npm run dev",

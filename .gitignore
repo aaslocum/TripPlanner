@@ -1,4 +1,5 @@
 node_modules/
+client/package-lock.json
 dist/
 *.db
 .env
