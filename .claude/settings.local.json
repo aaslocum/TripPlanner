@@ -58,7 +58,11 @@
       "Bash(node src/db/migrations/runner.js)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d\\)\")",
       "Bash(taskkill //PID 261944 //F)",
-      "Bash(taskkill //F //PID 30476)"
+      "Bash(taskkill //F //PID 30476)",
+      "Bash(tasklist)",
+      "Bash(curl -s http://localhost:3000/api/trips/1 -X PUT -H \"Content-Type: application/json\" -d '{\"\"trip_name\"\": \"\"Alex''''s 40th Birthday Getaway\"\", \"\"start_date\"\": \"\"2026-04-17\"\", \"\"end_date\"\": \"\"2026-04-20\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/users/11 -X PUT -H \"Content-Type: application/json\" -d '{\"\"first_name\"\": \"\"Mel\"\", \"\"last_name\"\": \"\"Taillon\"\"}')",
+      "Bash(chmod +x /c/Users/alxsl/TripPlanner/deploy.sh)"
     ]
   }
 }

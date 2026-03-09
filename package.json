@@ -12,7 +12,8 @@
     "db:seed": "cd server && node src/db/seed.js",
     "db:reset": "cd server && node src/db/migrations/runner.js --reset && node src/db/seed.js",
     "build": "cd client && npm run build",
-    "start": "cd server && node src/index.js"
+    "start": "cd server && cross-env AUTH_BYPASS=true node src/index.js",
+    "start:prod": "cd server && node src/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

@@ -1,0 +1,17 @@
+[Unit]
+Description=TripPlanner Node.js Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/TripPlanner/server
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/root/TripPlanner/server/.env
+
+[Install]
+WantedBy=multi-user.target
