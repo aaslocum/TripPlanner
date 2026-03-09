@@ -298,7 +298,7 @@ watch(() => agentStore.pendingAction, async (action) => {
     if (selectedAccommodation.value) {
       await selectAccommodation(selectedAccommodation.value.accommodation_id);
     }
-    agentStore.setResult({ success: true, message: 'Bed claimed! You're all set.' });
+    agentStore.setResult({ success: true, message: "Bed claimed! You're all set." });
   } catch (err) {
     const msg = err.response?.data?.error?.message || 'Failed to claim bed';
     agentStore.setResult({ success: false, message: msg });
