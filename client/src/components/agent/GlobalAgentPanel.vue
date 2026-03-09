@@ -106,8 +106,21 @@ function confirmAction() {
   if (!pendingLocalAction.value) return;
   agentStore.dispatch(pendingLocalAction.value);
   pendingLocalAction.value = null;
-  isOpen.value = false;
+  // Don't close panel — wait for result feedback
 }
+
+// Watch for action results from page views and show feedback
+watch(() => agentStore.lastActionResult, async (result) => {
+  if (!result) return;
+  messages.value.push({
+    role: 'assistant',
+    content: result.success
+      ? `✅ ${result.message}`
+      : `❌ ${result.message}`,
+  });
+  agentStore.clearResult();
+  await scrollToBottom();
+});
 
 function cancelAction() {
   messages.value.push({

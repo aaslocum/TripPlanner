@@ -127,6 +127,15 @@ async function removeClaim(claimId) {
   emit('refresh');
 }
 
+async function claimBed(bedId) {
+  try {
+    await apiClient.post(`/beds/${bedId}/claim`);
+    emit('refresh');
+  } catch (err) {
+    alert(err.response?.data?.error?.message || 'Failed to claim bed');
+  }
+}
+
 const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
 </script>
 
@@ -198,6 +207,39 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
           </div>
 
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ bedSummary(bedroom) }}</p>
+
+          <!-- Individual beds with claim buttons -->
+          <div v-if="bedroom.beds?.length" class="mt-3 space-y-1.5">
+            <div
+              v-for="bed in bedroom.beds"
+              :key="bed.bed_id"
+              class="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+              :class="bed.assigned_user_id === authStore.activeUser?.user_id
+                ? 'bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800'
+                : bed.assigned_user_id
+                  ? 'bg-gray-50 dark:bg-gray-800'
+                  : 'bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600'"
+            >
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ bed.bed_type }} bed</span>
+                <span v-if="bed.assigned_user_id === authStore.activeUser?.user_id"
+                  class="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium">
+                  Your Bed
+                </span>
+                <span v-else-if="bed.first_name"
+                  class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ bed.first_name }} {{ bed.last_name }}
+                </span>
+              </div>
+              <button
+                v-if="!bed.assigned_user_id"
+                @click="claimBed(bed.bed_id)"
+                class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
+              >
+                Claim
+              </button>
+            </div>
+          </div>
 
           <!-- Room claims -->
           <div class="flex flex-wrap gap-2 mt-3">

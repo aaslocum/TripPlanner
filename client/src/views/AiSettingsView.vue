@@ -5,11 +5,14 @@ import apiClient from '../api/client';
 
 const tripStore = useTripStore();
 
-// Settings state
+// Settings state — keys match ai_settings table
 const settings = ref({
   agent_voice_prompt: '',
-  activity_chat_question_prompt: '',
-  activity_chat_fill_prompt: '',
+  behavior_rules: '',
+  global_chat_accommodations_prompt: '',
+  global_chat_activities_prompt: '',
+  global_chat_itinerary_prompt: '',
+  global_chat_map_prompt: '',
 });
 const loading = ref(false);
 const saving = ref(false);
@@ -21,15 +24,33 @@ const contextPreview = ref('');
 const contextLoading = ref(false);
 const contextError = ref('');
 
-// Computed: full prompt previews with voice + context substituted
-const buildFullPrompt = (prompt) => {
-  const voicePrefix = settings.value.agent_voice_prompt
-    ? `${settings.value.agent_voice_prompt}\n\n---\n\n`
-    : '';
-  return voicePrefix + prompt.replace('{{TRIP_CONTEXT}}', contextPreview.value || '[Load context below to preview]');
-};
-const questionPromptPreview = computed(() => buildFullPrompt(settings.value.activity_chat_question_prompt));
-const fillPromptPreview    = computed(() => buildFullPrompt(settings.value.activity_chat_fill_prompt));
+// Which page prompt to preview assembled
+const previewPage = ref('accommodations');
+
+const pagePromptKeys = [
+  { key: 'global_chat_accommodations_prompt', label: 'Accommodations', icon: '🛏️', desc: 'Helps users find and claim beds. Has access to detailed bed availability.' },
+  { key: 'global_chat_activities_prompt', label: 'Activities', icon: '🏔️', desc: 'Helps users add activities. Returns JSON to pre-fill the activity form.' },
+  { key: 'global_chat_itinerary_prompt', label: 'Itinerary', icon: '📅', desc: 'Answers questions about the trip schedule. Read-only — cannot make changes.' },
+  { key: 'global_chat_map_prompt', label: 'Map', icon: '🗺️', desc: 'Centers the map on locations. Returns JSON with geocodable location strings.' },
+];
+
+// Assembled prompt preview
+const assembledPreview = computed(() => {
+  const voice = settings.value.agent_voice_prompt?.trim();
+  const rules = settings.value.behavior_rules?.trim();
+  const promptKey = `global_chat_${previewPage.value}_prompt`;
+  let prompt = settings.value[promptKey] || '';
+
+  const ctx = contextPreview.value || '[Load context below to preview]';
+  prompt = prompt.replaceAll('{{TRIP_CONTEXT}}', ctx);
+  prompt = prompt.replaceAll('{{PAGE_CONTEXT}}', '[Page-specific data injected at runtime]');
+
+  let assembled = '';
+  if (voice) assembled += voice + '\n\n---\n\n';
+  if (rules) assembled += rules + '\n\n';
+  assembled += prompt;
+  return assembled;
+});
 
 async function fetchSettings() {
   loading.value = true;
@@ -81,7 +102,7 @@ onMounted(() => {
     <div class="flex items-center justify-between mb-6">
       <div>
         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">AI Settings</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Configure the prompts sent to Claude for the Activity Chat feature</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Configure the prompts sent to Claude for the Travel Agent panel</p>
       </div>
       <button
         @click="saveSettings"
@@ -103,20 +124,20 @@ onMounted(() => {
       {{ saveError }}
     </div>
 
-    <div v-if="loading" class="py-16 text-center text-gray-500 dark:text-gray-400">Loading settings…</div>
+    <div v-if="loading" class="py-16 text-center text-gray-500 dark:text-gray-400">Loading settings...</div>
 
     <div v-else class="space-y-6">
 
       <!-- How it works -->
       <div class="bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 rounded-xl p-4 text-sm">
-        <p class="font-medium text-violet-900 dark:text-violet-200 mb-1">How Activity Chat works</p>
+        <p class="font-medium text-violet-900 dark:text-violet-200 mb-1">How the Travel Agent works</p>
         <ul class="text-violet-700 dark:text-violet-300 space-y-0.5 list-disc list-inside">
-          <li>Claude asks follow-up questions using the <strong>Questions Prompt</strong> until it has enough context (up to 6 turns)</li>
-          <li>It can return <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">formData</code> JSON early if it feels confident — no need to wait for turn 6</li>
-          <li>Turn 6+ forces the <strong>Form Fill Prompt</strong> regardless</li>
-          <li>The <strong>Tone & Voice</strong> block is prepended to every prompt automatically</li>
-          <li>Use <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">&#123;&#123;TRIP_CONTEXT&#125;&#125;</code> as a placeholder — replaced with live trip data (members + interests + activities) at runtime</li>
-          <li>After each completed chat, Claude writes a brief interest note on that user — visible in the context preview</li>
+          <li>The agent panel adapts to the current page (Accommodations, Activities, Itinerary, Map)</li>
+          <li>Each page has its own prompt — edit them below to customize behavior</li>
+          <li><strong>Tone &amp; Voice</strong> is prepended to every prompt automatically</li>
+          <li><strong>Behavior Rules</strong> (no fabrication, no sycophancy, etc.) are prepended after voice</li>
+          <li>Use <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">&#123;&#123;TRIP_CONTEXT&#125;&#125;</code> and <code class="bg-violet-100 dark:bg-violet-900 px-1 rounded">&#123;&#123;PAGE_CONTEXT&#125;&#125;</code> as placeholders for live data</li>
+          <li>After extended conversations (7+ turns), the agent gets progressively more impatient</li>
         </ul>
       </div>
 
@@ -124,36 +145,40 @@ onMounted(() => {
       <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         <div class="mb-3">
           <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Tone &amp; Voice</label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Prepended to every prompt — defines how Claude communicates. Affects all turns of the chat.</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Prepended to every prompt — defines how Claude communicates across all pages.</p>
         </div>
         <textarea
           v-model="settings.agent_voice_prompt"
-          rows="12"
-          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
-        />
-      </div>
-
-      <!-- Follow-up Questions Prompt -->
-      <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <div class="mb-3">
-          <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Follow-up Questions Prompt</label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Used on turns 1–5 — Claude asks one question at a time, or returns JSON <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">formData</code> when it has enough context</p>
-        </div>
-        <textarea
-          v-model="settings.activity_chat_question_prompt"
           rows="10"
           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
         />
       </div>
 
-      <!-- Form Fill Prompt -->
+      <!-- Behavior Rules -->
       <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         <div class="mb-3">
-          <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Form Fill Prompt</label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Forced on turn 6+ — Claude must return valid JSON with a <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">formData</code> object</p>
+          <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Behavior Rules</label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Core rules prepended to every page prompt (no fabrication, no sycophancy, geographic accuracy, brevity).</p>
         </div>
         <textarea
-          v-model="settings.activity_chat_fill_prompt"
+          v-model="settings.behavior_rules"
+          rows="8"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+        />
+      </div>
+
+      <!-- Page-specific prompts -->
+      <div
+        v-for="pp in pagePromptKeys"
+        :key="pp.key"
+        class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5"
+      >
+        <div class="mb-3">
+          <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100">{{ pp.icon }} {{ pp.label }} Page Prompt</label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ pp.desc }}</p>
+        </div>
+        <textarea
+          v-model="settings[pp.key]"
           rows="8"
           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
         />
@@ -165,7 +190,7 @@ onMounted(() => {
           <div>
             <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Live Trip Context Preview</p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              What <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">&#123;&#123;TRIP_CONTEXT&#125;&#125;</code> expands to for <strong>{{ tripStore.selectedTrip?.trip_name || 'the selected trip' }}</strong> — includes member interests if any have been noted
+              What <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">&#123;&#123;TRIP_CONTEXT&#125;&#125;</code> expands to for <strong>{{ tripStore.selectedTrip?.trip_name || 'the selected trip' }}</strong>
             </p>
           </div>
           <button
@@ -194,19 +219,21 @@ onMounted(() => {
 
       <!-- Full Prompt Preview -->
       <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Full Request Preview</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Read-only — the complete system prompt Claude receives, with voice prefix and trip context substituted in</p>
-
-        <div class="space-y-4">
+        <div class="flex items-start justify-between mb-3">
           <div>
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Turns 1–5 (Follow-up Questions)</p>
-            <pre class="text-xs bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-x-auto text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ questionPromptPreview }}</pre>
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Full Prompt Preview</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Read-only — the complete system prompt Claude receives, assembled from voice + rules + page prompt</p>
           </div>
-          <div>
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Turn 6+ (Forced Form Fill)</p>
-            <pre class="text-xs bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-x-auto text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ fillPromptPreview }}</pre>
-          </div>
+          <select
+            v-model="previewPage"
+            class="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-800 dark:text-gray-300"
+          >
+            <option v-for="pp in pagePromptKeys" :key="pp.key" :value="pp.key.replace('global_chat_', '').replace('_prompt', '')">
+              {{ pp.icon }} {{ pp.label }}
+            </option>
+          </select>
         </div>
+        <pre class="text-xs bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 overflow-x-auto text-gray-700 dark:text-gray-300 whitespace-pre-wrap max-h-96 overflow-y-auto">{{ assembledPreview }}</pre>
       </div>
 
     </div>

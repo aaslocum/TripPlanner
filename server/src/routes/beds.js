@@ -44,6 +44,17 @@ router.post('/:id/claim', async (req, res) => {
   const db = await getDb();
   const bed = get(db, 'SELECT * FROM beds WHERE bed_id = ?', [req.params.id]);
   if (!bed) return res.status(404).json({ success: false, error: { message: 'Bed not found' } });
+
+  // Verify user is a member of the trip that owns this bed
+  const bedroom = get(db, 'SELECT accommodation_id FROM bedrooms WHERE bedroom_id = ?', [bed.bedroom_id]);
+  const accom = get(db, 'SELECT trip_id FROM accommodations WHERE accommodation_id = ?', [bedroom?.accommodation_id]);
+  if (accom && req.user.role !== 'admin') {
+    const member = get(db, 'SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?', [accom.trip_id, req.user.user_id]);
+    if (!member) {
+      return res.status(403).json({ success: false, error: { message: 'Not a member of this trip' } });
+    }
+  }
+
   if (bed.assigned_user_id && bed.assigned_user_id !== req.user.user_id) {
     return res.status(409).json({ success: false, error: { message: 'This bed is already taken' } });
   }

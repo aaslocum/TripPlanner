@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 const props = defineProps({
   accommodation: { type: Object, required: true },
+  memberCount: { type: Number, default: 1 },
 });
 
 const imageIndex = ref(0);
@@ -85,6 +86,13 @@ function formatCost(cost) {
         <div class="flex gap-2">
           <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Total Cost:</span>
           <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ formatCost(accommodation.total_cost) }}</span>
+        </div>
+        <div v-if="accommodation.total_cost && memberCount > 1" class="flex gap-2">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Per Person:</span>
+          <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+            {{ formatCost(accommodation.total_cost / memberCount) }}
+            <span class="text-xs font-normal text-gray-400">({{ memberCount }} people)</span>
+          </span>
         </div>
       </div>
 

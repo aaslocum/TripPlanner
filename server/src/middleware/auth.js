@@ -2,6 +2,26 @@ import jwt from 'jsonwebtoken';
 import config from '../config/env.js';
 import { getDb, get } from '../db/connection.js';
 
+// Verify user belongs to the trip. By default reads tripId from req.body.tripId.
+// Pass a function to extract tripId from a different source.
+export function tripMemberMiddleware(getTripId) {
+  return async (req, res, next) => {
+    const tripId = typeof getTripId === 'function' ? getTripId(req) : req.body?.tripId;
+    if (!tripId) return res.status(400).json({ success: false, error: { message: 'tripId required' } });
+    // Admins bypass membership check
+    if (req.user?.role === 'admin') return next();
+    const db = await getDb();
+    const membership = get(db,
+      'SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?',
+      [tripId, req.user.user_id]
+    );
+    if (!membership) {
+      return res.status(403).json({ success: false, error: { message: 'Not a member of this trip' } });
+    }
+    next();
+  };
+}
+
 export async function authMiddleware(req, res, next) {
   // Dev bypass mode - auto-authenticate as Alex (admin)
   if (config.authBypass) {

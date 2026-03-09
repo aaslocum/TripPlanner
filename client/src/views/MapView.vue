@@ -69,20 +69,24 @@ async function loadMap() {
       } catch { /* skip failed geocodes */ }
     }
 
-    // Geocode activities with google_place_id
+    // Geocode activities — try place_id first, fall back to address, then stored lat/lng
     for (const act of activities) {
-      if (!act.google_place_id) continue;
       try {
-        const result = await geocoder.geocode({ placeId: act.google_place_id });
-        if (result.results.length > 0) {
-          const pos = result.results[0].geometry.location;
+        let pos = null;
+        if (act.google_place_id) {
+          const result = await geocoder.geocode({ placeId: act.google_place_id });
+          if (result.results.length > 0) pos = result.results[0].geometry.location;
+        }
+        if (!pos && act.address) {
+          const result = await geocoder.geocode({ address: act.address });
+          if (result.results.length > 0) pos = result.results[0].geometry.location;
+        }
+        if (!pos && act.latitude && act.longitude) {
+          pos = new google.maps.LatLng(act.latitude, act.longitude);
+        }
+        if (pos) {
           const pin = new PinElement({ background: '#059669', borderColor: '#047857', glyphColor: '#fff' });
-          const marker = new AdvancedMarkerElement({
-            map,
-            position: pos,
-            title: act.title,
-            content: pin.element,
-          });
+          const marker = new AdvancedMarkerElement({ map, position: pos, title: act.title, content: pin.element });
           markers.push(marker);
           bounds.extend(pos);
           hasPoints = true;

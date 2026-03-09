@@ -18,6 +18,7 @@ const accommodations = ref([]);
 const selectedAccommodation = ref(null);
 const activeTab = ref('living');
 const loading = ref(false);
+const memberCount = ref(1);
 const showForm = ref(false);
 const editingId = ref(null); // null = create, number = editing
 const form = ref({ description: '', address: '', airbnb_id: '', airbnb_url: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' });
@@ -188,8 +189,12 @@ async function fetchAccommodations() {
   if (!tripStore.selectedTripId) return;
   loading.value = true;
   try {
-    const { data } = await apiClient.get(`/accommodations/trip/${tripStore.selectedTripId}`);
-    accommodations.value = data.data;
+    const [accRes, membersRes] = await Promise.all([
+      apiClient.get(`/accommodations/trip/${tripStore.selectedTripId}`),
+      apiClient.get(`/trips/${tripStore.selectedTripId}/members`),
+    ]);
+    accommodations.value = accRes.data.data;
+    memberCount.value = membersRes.data.data?.length || 1;
     if (accommodations.value.length > 0 && !selectedAccommodation.value) {
       await selectAccommodation(accommodations.value[0].accommodation_id);
     }
@@ -293,8 +298,10 @@ watch(() => agentStore.pendingAction, async (action) => {
     if (selectedAccommodation.value) {
       await selectAccommodation(selectedAccommodation.value.accommodation_id);
     }
+    agentStore.setResult({ success: true, message: 'Bed claimed! You're all set.' });
   } catch (err) {
-    console.error('Failed to claim bed:', err.response?.data?.error?.message || err.message);
+    const msg = err.response?.data?.error?.message || 'Failed to claim bed';
+    agentStore.setResult({ success: false, message: msg });
   }
 });
 </script>
@@ -471,7 +478,7 @@ watch(() => agentStore.pendingAction, async (action) => {
       </div>
 
       <div class="p-3 md:p-6">
-        <OverviewTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" />
+        <OverviewTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" :member-count="memberCount" />
         <BedroomsTab v-if="activeTab === 'bedrooms'" :accommodation="selectedAccommodation" @refresh="selectAccommodation(selectedAccommodation.accommodation_id)" />
         <AmenitiesTab v-if="activeTab === 'amenities'" :accommodation="selectedAccommodation" />
         <LocationTab v-if="activeTab === 'location'" :accommodation="selectedAccommodation" />

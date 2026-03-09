@@ -1,11 +1,10 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
 import { useAgentStore } from '../stores/agent';
 import apiClient from '../api/client';
-import ActivityAgentChat from '../components/activities/ActivityAgentChat.vue';
 
 const authStore = useAuthStore();
 const tripStore = useTripStore();
@@ -15,7 +14,6 @@ const showForm = ref(false);
 const editingId = ref(null);
 const emptyForm = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', duration: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
 const form = ref({ ...emptyForm });
-const showChat = ref(false);
 
 function onAgentFill(data) {
   if (data.title) form.value.title = data.title;
@@ -221,6 +219,26 @@ function formatDate(dt) {
   return new Date(dt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function formatDayHeader(dateStr) {
+  return new Date(dateStr + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+// Group activities by date for organized display
+const groupedActivities = computed(() => {
+  const groups = {};
+  for (const act of activities.value) {
+    const date = act.start_datetime ? act.start_datetime.split('T')[0] : 'unscheduled';
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(act);
+  }
+  return Object.entries(groups)
+    .sort(([a], [b]) => {
+      if (a === 'unscheduled') return 1;
+      if (b === 'unscheduled') return -1;
+      return a.localeCompare(b);
+    });
+});
+
 watch(() => tripStore.selectedTripId, fetchActivities);
 onMounted(fetchActivities);
 
@@ -228,11 +246,16 @@ onMounted(fetchActivities);
 const agentStore = useAgentStore();
 watch(() => agentStore.pendingAction, (action) => {
   if (!action || action.type !== 'add-activity') return;
-  editingId.value = null;
-  form.value = { ...emptyForm };
-  onAgentFill(action.formData || {});
-  showForm.value = true;
   agentStore.clearAction();
+  try {
+    editingId.value = null;
+    form.value = { ...emptyForm };
+    onAgentFill(action.formData || {});
+    showForm.value = true;
+    agentStore.setResult({ success: true, message: 'Activity form pre-filled! Review and save when ready.' });
+  } catch (err) {
+    agentStore.setResult({ success: false, message: 'Failed to fill activity form.' });
+  }
 });
 </script>
 
@@ -246,12 +269,6 @@ watch(() => agentStore.pendingAction, (action) => {
         </button>
       </div>
       <div v-else class="flex items-center gap-2 flex-wrap justify-end">
-        <button v-if="!editingId" @click="showChat = true" type="button" class="bg-violet-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-1.5">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-          Ask the Agent
-        </button>
         <button @click="saveActivity" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
           {{ editingId ? 'Update' : 'Save' }}
         </button>
@@ -348,17 +365,13 @@ watch(() => agentStore.pendingAction, (action) => {
       </div>
     </div>
 
-    <!-- Travel Agent Chat -->
-    <ActivityAgentChat
-      v-if="showChat"
-      :trip-id="tripStore.selectedTripId"
-      @fill="onAgentFill"
-      @close="showChat = false"
-    />
-
-    <!-- Activity panels -->
-    <div class="space-y-4">
-      <div v-for="activity in activities" :key="activity.activity_id" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row">
+    <!-- Activity panels grouped by date -->
+    <div v-for="[date, dayActivities] in groupedActivities" :key="date">
+      <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700 pb-2 mt-6 first:mt-0 mb-4">
+        {{ date === 'unscheduled' ? 'Unscheduled' : formatDayHeader(date) }}
+      </h3>
+      <div class="space-y-4">
+      <div v-for="activity in dayActivities" :key="activity.activity_id" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row">
         <div v-if="activity.image_url" class="w-full h-48 md:w-64 md:h-auto flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
@@ -402,6 +415,7 @@ watch(() => agentStore.pendingAction, (action) => {
             <span v-if="activity.rating" class="text-sm bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">{{ activity.rating }} stars</span>
           </div>
         </div>
+      </div>
       </div>
     </div>
 

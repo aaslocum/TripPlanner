@@ -1,12 +1,31 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminMiddleware, tripMemberMiddleware } from '../middleware/auth.js';
 import { getDb, all, get, run } from '../db/connection.js';
 import config from '../config/env.js';
 
 const router = Router();
 // Don't pass apiKey: undefined — SDK throws instead of falling back to env var
 const anthropic = new Anthropic(config.anthropicApiKey ? { apiKey: config.anthropicApiKey } : {});
+
+// ---------------------------------------------------------------------------
+// Shared utility: robust JSON extraction from Claude responses
+// ---------------------------------------------------------------------------
+
+function extractJSON(text) {
+  // 1. Direct parse
+  try { return JSON.parse(text); } catch {}
+  // 2. Strip markdown code fences
+  const fenced = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '');
+  try { return JSON.parse(fenced); } catch {}
+  // 3. Extract first { ... } block (handles preamble/trailing text)
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) try { return JSON.parse(match[0]); } catch {}
+  // 4. Try extracting array [ ... ]
+  const arrMatch = text.match(/\[[\s\S]*\]/);
+  if (arrMatch) try { return JSON.parse(arrMatch[0]); } catch {}
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Trip context helpers
@@ -107,8 +126,8 @@ async function generateUserNote(userId, messages, formData) {
       .join('\n');
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
+      model: 'claude-haiku-235-20250414',
+      max_tokens: 150,
       system: `Based on a travel activity chat conversation, write a brief 1-3 sentence note capturing this user's activity preferences, interests, and travel style — things that would help future activity recommendations. If existing notes are provided, update and merge them. Return ONLY the note text, nothing else.`,
       messages: [{
         role: 'user',
@@ -137,90 +156,6 @@ router.get('/preview-context', authMiddleware, adminMiddleware, async (req, res)
     res.json({ success: true, data: { context: formatContextForClaude(ctx) } });
   } catch (err) {
     res.status(500).json({ success: false, error: { message: err.message } });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/agent/activity-chat — conversational activity helper (all users)
-// Must be defined BEFORE the global adminMiddleware below
-// ---------------------------------------------------------------------------
-
-router.post('/activity-chat', authMiddleware, async (req, res) => {
-  try {
-    const { tripId, messages } = req.body;
-    const ctx = await buildTripContext(tripId);
-    if (!ctx) return res.status(404).json({ success: false, error: { message: 'Trip not found' } });
-
-    const tripContext = formatContextForClaude(ctx);
-    const userMessages = (messages || []).filter(m => m.role === 'user');
-    const turnNumber = userMessages.length;
-    const isForcedFill = turnNumber >= 6; // cap — force a suggestion at turn 6
-
-    // Read prompts + voice from DB (fall back to hardcoded defaults)
-    const db = await getDb();
-    const questionRow = get(db, "SELECT value FROM ai_settings WHERE key = 'activity_chat_question_prompt'");
-    const fillRow    = get(db, "SELECT value FROM ai_settings WHERE key = 'activity_chat_fill_prompt'");
-    const voiceRow   = get(db, "SELECT value FROM ai_settings WHERE key = 'agent_voice_prompt'");
-
-    const defaultQuestion = `You are a friendly travel agent chat assistant helping users find an activity for their group trip. Ask conversational follow-up questions — one at a time — to understand exactly what they're looking for. Be natural and warm.
-
-Once you have enough context to confidently suggest a specific activity, return ONLY valid JSON (no other text):
-{"message": "your closing message here", "formData": {"title": "Activity Name", "description": "Short description", "address": "Full address or city/region", "estimated_cost": 40, "duration": 2}}
-
-If you need more info, ask your next question in plain text. Don't rush — make sure you understand the vibe they're going for first.
-
-Trip context:
-{{TRIP_CONTEXT}}`;
-
-    const defaultFill = `You are a friendly travel agent. Based on the conversation, suggest a specific activity and return ONLY valid JSON with no other text:
-{"message": "Great, I found something perfect! Let me fill in the details.", "formData": {"title": "Activity Name", "description": "Short description", "address": "Full address or city/region", "estimated_cost": 40, "duration": 2}}
-
-Trip context:
-{{TRIP_CONTEXT}}`;
-
-    const promptTemplate = isForcedFill
-      ? (fillRow?.value || defaultFill)
-      : (questionRow?.value || defaultQuestion);
-
-    // Prepend voice/tone if configured
-    const voicePrefix = voiceRow?.value ? `${voiceRow.value}\n\n---\n\n` : '';
-    const systemPrompt = voicePrefix + promptTemplate.replace('{{TRIP_CONTEXT}}', tripContext);
-
-    // Build message history for Claude (exclude the initial assistant greeting stub)
-    const claudeMessages = (messages || []).filter(m => !(m.role === 'assistant' && m._initial));
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
-    });
-
-    const text = response.content[0].text.trim();
-
-    // Always try to parse JSON — Claude may return formData early from the question prompt
-    let message = text;
-    let formData = null;
-    try {
-      const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      const parsed = JSON.parse(cleaned);
-      if (parsed.formData) {
-        message = parsed.message || "Let me fill that in for you.";
-        formData = parsed.formData;
-      }
-    } catch {
-      // Not JSON — plain conversational reply, that's fine
-    }
-
-    // Fire-and-forget: update user interest notes after a completed interaction
-    if (formData && req.user?.user_id) {
-      generateUserNote(req.user.user_id, claudeMessages, formData).catch(() => {});
-    }
-
-    res.json({ success: true, data: { message, formData } });
-  } catch (err) {
-    console.error('Activity chat error:', err);
-    res.status(500).json({ success: false, error: { message: err.message || 'Chat failed' } });
   }
 });
 
@@ -318,22 +253,18 @@ function formatPageContext(page, pageData) {
   return lines.join('\n');
 }
 
-function getPageSystemPrompt(page, voice, tripContext, extraContext) {
-  const voicePrefix = voice ? `${voice}\n\n---\n\n` : '';
+// ---------------------------------------------------------------------------
+// Prompt defaults — fallback values when DB has no entry for a key
+// ---------------------------------------------------------------------------
 
-  // Shared behavioral rules prepended to every page prompt
-  const behaviorRules =
-`CORE BEHAVIOR RULES (apply to every response):
+const PROMPT_DEFAULTS = {
+  behavior_rules: `CORE BEHAVIOR RULES (apply to every response):
 1. NO FABRICATION: Never name a specific business, venue, park, track, rental company, address, phone number, or website unless you are HIGHLY confident it exists, is currently operating, and matches what you're describing. When uncertain, say "search for [type of place] near [area]" instead. Getting this wrong wastes the user's time and kills trust. Honest uncertainty > confident bullshit.
-2. NO SYCOPHANCY: Do NOT agree with the user just to be agreeable. If they say something geographically wrong, factually incorrect, or logically off — push back respectfully. You are an expert, act like one. "Actually, Allentown is northeast of Philly, not between Philly and Shenandoah" is a better response than "oh nice, you're right!"
+2. NO SYCOPHANCY: Do NOT agree with the user just to be agreeable. If they say something geographically wrong, factually incorrect, or logically off — push back respectfully. You are an expert, act like one.
 3. GEOGRAPHIC ACCURACY: When discussing locations and routes, think carefully about actual geography. Use the trip's known locations (from context) as anchors. If you're unsure about relative positions, say so rather than guessing.
-4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.
+4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.`,
 
-`;
-
-  const prompts = {
-    accommodations:
-`${behaviorRules}You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and claim a specific bed.
+  global_chat_accommodations_prompt: `You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and claim a specific bed.
 
 Only reference beds that actually appear in the data below. Do not invent room names or bed types.
 
@@ -343,11 +274,10 @@ When the user has confirmed which bed they want, return ONLY valid JSON (no othe
 Replace 3 with the actual bed_id. If you need to clarify which bed, ask in plain text.
 
 Trip context:
-${tripContext}
-${extraContext}`,
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
 
-    activities:
-`${behaviorRules}You are a travel agent helping a trip member add an activity to the trip. Ask a question or two to understand what they want, then pre-fill the form.
+  global_chat_activities_prompt: `You are a travel agent helping a trip member add an activity to the trip. Ask a question or two to understand what they want, then pre-fill the form.
 
 When ready to suggest an activity, return ONLY valid JSON (no other text):
 {"message": "Let me fill that in for you!", "action": {"type": "add-activity", "formData": {"title": "Activity Name", "description": "Short description — note if location needs confirming", "address": "Specific address or general area", "estimated_cost": 40, "duration": 2, "start_datetime": null}}}
@@ -355,17 +285,15 @@ When ready to suggest an activity, return ONLY valid JSON (no other text):
 Use ISO 8601 for start_datetime (e.g. "2026-04-11T10:00") or null if unknown. For the title, use a generic descriptive name (e.g. "Go-Kart Racing" not "Bob's Kart Track") unless you are certain the specific business exists. If you need more info, ask in plain text.
 
 Trip context:
-${tripContext}`,
+{{TRIP_CONTEXT}}`,
 
-    itinerary:
-`${behaviorRules}You are a travel agent providing information about this trip's itinerary. Answer questions, offer observations, and give suggestions — but you cannot make changes from this page. Direct the user to the Activities page to add things.
+  global_chat_itinerary_prompt: `You are a travel agent providing information about this trip's itinerary. Answer questions, offer observations, and give suggestions — but you cannot make changes from this page. Direct the user to the Activities page to add things.
 
 Trip context:
-${tripContext}
-${extraContext}`,
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
 
-    map:
-`${behaviorRules}You are a travel agent helping the user navigate the trip map. When the user names a place or location they want to see, return action JSON to center the map there.
+  global_chat_map_prompt: `You are a travel agent helping the user navigate the trip map. When the user names a place or location they want to see, return action JSON to center the map there.
 
 Return ONLY valid JSON (no other text) when centering the map:
 {"message": "Centering on that now!", "action": {"type": "center-map", "query": "Blue Ridge Parkway, VA"}}
@@ -373,12 +301,44 @@ Return ONLY valid JSON (no other text) when centering the map:
 Use a specific, geocodable location string. If the user asks to zoom in/out or pan, that's not something you can do — just offer to center on a different location.
 
 Trip context:
-${tripContext}
-${extraContext}`,
-  };
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
+};
 
-  const base = prompts[page] || prompts.itinerary;
-  return voicePrefix + base;
+const PAGE_PROMPT_KEY = {
+  accommodations: 'global_chat_accommodations_prompt',
+  activities: 'global_chat_activities_prompt',
+  itinerary: 'global_chat_itinerary_prompt',
+  map: 'global_chat_map_prompt',
+};
+
+async function buildSystemPrompt(page, tripContext, pageContext) {
+  const db = await getDb();
+
+  // Voice — prepended before everything
+  const voiceRow = get(db, "SELECT value FROM ai_settings WHERE key = 'agent_voice_prompt'");
+  const voice = voiceRow?.value?.trim() || '';
+
+  // Behavior rules — prepended before page prompt
+  const rulesRow = get(db, "SELECT value FROM ai_settings WHERE key = 'behavior_rules'");
+  const rules = rulesRow?.value?.trim() || PROMPT_DEFAULTS.behavior_rules;
+
+  // Page-specific prompt
+  const promptKey = PAGE_PROMPT_KEY[page] || PAGE_PROMPT_KEY.itinerary;
+  const promptRow = get(db, "SELECT value FROM ai_settings WHERE key = ?", [promptKey]);
+  let pagePrompt = promptRow?.value?.trim() || PROMPT_DEFAULTS[promptKey];
+
+  // Replace template variables
+  pagePrompt = pagePrompt.replaceAll('{{TRIP_CONTEXT}}', tripContext);
+  pagePrompt = pagePrompt.replaceAll('{{PAGE_CONTEXT}}', pageContext);
+
+  // Assemble: [voice] + rules + page prompt
+  let systemPrompt = '';
+  if (voice) systemPrompt += voice + '\n\n---\n\n';
+  systemPrompt += rules + '\n\n';
+  systemPrompt += pagePrompt;
+
+  return systemPrompt;
 }
 
 function getEscalationSuffix(turnCount) {
@@ -401,7 +361,7 @@ function getEscalationSuffix(turnCount) {
   return `\n\n[Tone note: WRAP IT UP. Your response must be dismissive and funny — along the lines of: "${pick}" — and then refuse to keep helping until they make an actual decision. Stay in character but make it clear the conversation needs to end.]`;
 }
 
-router.post('/chat', authMiddleware, async (req, res) => {
+router.post('/chat', authMiddleware, tripMemberMiddleware(), async (req, res) => {
   try {
     const { tripId, messages, page } = req.body;
     const ctx = await buildTripContext(tripId);
@@ -409,16 +369,12 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
     const tripContext = formatContextForClaude(ctx);
     const pageData = await buildPageContext(page, tripId);
-    const extraContext = formatPageContext(page, pageData);
-
-    const db = await getDb();
-    const voiceRow = get(db, "SELECT value FROM ai_settings WHERE key = 'agent_voice_prompt'");
-    const voice = voiceRow?.value || '';
+    const pageContext = formatPageContext(page, pageData);
 
     const userMessages = (messages || []).filter(m => m.role === 'user');
     const turnCount = userMessages.length;
 
-    const systemPrompt = getPageSystemPrompt(page, voice, tripContext, extraContext)
+    const systemPrompt = await buildSystemPrompt(page, tripContext, pageContext)
       + getEscalationSuffix(turnCount);
 
     // Exclude initial assistant stub
@@ -435,15 +391,10 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
     let message = text;
     let action = null;
-    try {
-      const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      const parsed = JSON.parse(cleaned);
-      if (parsed.action) {
-        message = parsed.message || 'On it!';
-        action = parsed.action;
-      }
-    } catch {
-      // Plain text reply — fine
+    const parsed = extractJSON(text);
+    if (parsed?.action) {
+      message = parsed.message || 'On it!';
+      action = parsed.action;
     }
 
     res.json({ success: true, data: { message, action } });
@@ -480,13 +431,10 @@ router.post('/questions', async (req, res) => {
     });
 
     const text = message.content[0].text.trim();
-    let questions;
-    try {
-      const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      questions = JSON.parse(cleaned);
-    } catch {
-      questions = text.split('\n').filter(l => l.trim()).slice(0, 4);
-    }
+    const parsedQuestions = extractJSON(text);
+    const questions = Array.isArray(parsedQuestions)
+      ? parsedQuestions
+      : text.split('\n').filter(l => l.trim()).slice(0, 4);
 
     res.json({ success: true, data: { questions, tripContext, systemPrompt } });
   } catch (err) {
@@ -535,11 +483,8 @@ Return ONLY the JSON, no other text.`,
     });
 
     const text = message.content[0].text.trim();
-    let proposal;
-    try {
-      const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      proposal = JSON.parse(cleaned);
-    } catch {
+    const proposal = extractJSON(text);
+    if (!proposal) {
       return res.status(500).json({ success: false, error: { message: 'Failed to parse Claude response', raw: text } });
     }
 
