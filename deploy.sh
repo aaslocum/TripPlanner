@@ -6,6 +6,9 @@ SERVICE_NAME="tripplanner"
 
 cd "$APP_DIR"
 
+echo "Stopping service..."
+systemctl stop "$SERVICE_NAME" || true
+
 echo "Pulling latest code..."
 git pull
 
@@ -19,8 +22,8 @@ npm run build
 echo "Running database migrations..."
 cd server && node src/db/migrations/runner.js && cd ..
 
-echo "Restarting service..."
-systemctl restart "$SERVICE_NAME"
+echo "Starting service..."
+systemctl start "$SERVICE_NAME"
 
 echo "Deploy complete! Status:"
 systemctl status "$SERVICE_NAME" --no-pager
