@@ -12,6 +12,7 @@ export default {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   budgetMasterKey: process.env.BUDGET_ENCRYPTION_MASTER_KEY,
+  baseUrl: process.env.BASE_URL || '',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV || 'development',
 };

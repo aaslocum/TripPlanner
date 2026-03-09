@@ -12,7 +12,7 @@ export function configurePassport() {
   passport.use(new GoogleStrategy({
     clientID: config.googleClientId,
     clientSecret: config.googleClientSecret,
-    callbackURL: '/api/auth/google/callback',
+    callbackURL: config.baseUrl ? `${config.baseUrl}/api/auth/google/callback` : '/api/auth/google/callback',
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const db = await getDb();
