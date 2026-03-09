@@ -3,6 +3,7 @@ import { ref, watch, onMounted } from 'vue';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
+import { useAgentStore } from '../stores/agent';
 import apiClient from '../api/client';
 
 const authStore = useAuthStore();
@@ -281,6 +282,21 @@ async function deleteAccommodation(id) {
 
 watch(() => tripStore.selectedTripId, fetchAccommodations);
 onMounted(fetchAccommodations);
+
+// Global agent panel — handle claim-bed action
+const agentStore = useAgentStore();
+watch(() => agentStore.pendingAction, async (action) => {
+  if (!action || action.type !== 'claim-bed') return;
+  agentStore.clearAction();
+  try {
+    await apiClient.post(`/beds/${action.bedId}/claim`);
+    if (selectedAccommodation.value) {
+      await selectAccommodation(selectedAccommodation.value.accommodation_id);
+    }
+  } catch (err) {
+    console.error('Failed to claim bed:', err.response?.data?.error?.message || err.message);
+  }
+});
 </script>
 
 <template>

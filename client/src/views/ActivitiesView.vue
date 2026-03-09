@@ -3,6 +3,7 @@ import { ref, watch, onMounted } from 'vue';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
+import { useAgentStore } from '../stores/agent';
 import apiClient from '../api/client';
 import ActivityAgentChat from '../components/activities/ActivityAgentChat.vue';
 
@@ -222,6 +223,17 @@ function formatDate(dt) {
 
 watch(() => tripStore.selectedTripId, fetchActivities);
 onMounted(fetchActivities);
+
+// Global agent panel — handle add-activity action
+const agentStore = useAgentStore();
+watch(() => agentStore.pendingAction, (action) => {
+  if (!action || action.type !== 'add-activity') return;
+  editingId.value = null;
+  form.value = { ...emptyForm };
+  onAgentFill(action.formData || {});
+  showForm.value = true;
+  agentStore.clearAction();
+});
 </script>
 
 <template>

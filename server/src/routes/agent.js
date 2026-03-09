@@ -107,7 +107,7 @@ async function generateUserNote(userId, messages, formData) {
       .join('\n');
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 200,
       system: `Based on a travel activity chat conversation, write a brief 1-3 sentence note capturing this user's activity preferences, interests, and travel style — things that would help future activity recommendations. If existing notes are provided, update and merge them. Return ONLY the note text, nothing else.`,
       messages: [{
@@ -190,7 +190,7 @@ Trip context:
     const claudeMessages = (messages || []).filter(m => !(m.role === 'assistant' && m._initial));
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 512,
       system: systemPrompt,
       messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
@@ -225,6 +225,235 @@ Trip context:
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/agent/chat — Global travel agent (all users, page-aware)
+// ---------------------------------------------------------------------------
+
+async function buildPageContext(page, tripId) {
+  const db = await getDb();
+  switch (page) {
+    case 'accommodations': {
+      const beds = all(db,
+        `SELECT b.bed_id, b.bed_type, b.assigned_user_id,
+                br.bedroom_id, br.name AS bedroom_name,
+                a.accommodation_id, a.description AS accommodation_name,
+                u.first_name, u.last_name
+         FROM beds b
+         JOIN bedrooms br ON b.bedroom_id = br.bedroom_id
+         JOIN accommodations a ON br.accommodation_id = a.accommodation_id
+         LEFT JOIN users u ON b.assigned_user_id = u.user_id
+         WHERE a.trip_id = ?
+         ORDER BY a.accommodation_id, br.bedroom_id, b.bed_id`,
+        [tripId]
+      );
+      return { beds };
+    }
+    case 'activities': {
+      const activities = all(db,
+        `SELECT title, description, address, start_datetime, estimated_cost, duration, is_suggested
+         FROM activities WHERE trip_id = ? ORDER BY start_datetime`,
+        [tripId]
+      );
+      return { activities };
+    }
+    case 'itinerary': {
+      const activities = all(db,
+        `SELECT title, description, address, start_datetime, estimated_cost, duration
+         FROM activities WHERE trip_id = ? ORDER BY start_datetime`,
+        [tripId]
+      );
+      const accommodations = all(db,
+        `SELECT description, address, check_in_datetime, check_out_datetime
+         FROM accommodations WHERE trip_id = ?`,
+        [tripId]
+      );
+      return { activities, accommodations };
+    }
+    case 'map': {
+      const activities = all(db,
+        `SELECT title, address, latitude, longitude FROM activities WHERE trip_id = ?`,
+        [tripId]
+      );
+      const accommodations = all(db,
+        `SELECT description, address FROM accommodations WHERE trip_id = ?`,
+        [tripId]
+      );
+      return { activities, accommodations };
+    }
+    default:
+      return {};
+  }
+}
+
+function formatPageContext(page, pageData) {
+  const lines = [];
+  switch (page) {
+    case 'accommodations': {
+      const { beds } = pageData;
+      if (beds?.length) {
+        lines.push('\nDetailed bed availability (for helping user choose and claim a bed):');
+        let lastAccom = null;
+        beds.forEach(b => {
+          if (b.accommodation_name !== lastAccom) {
+            lines.push(`  ${b.accommodation_name || 'Accommodation'}:`);
+            lastAccom = b.accommodation_name;
+          }
+          const status = b.first_name
+            ? `Taken by ${b.first_name} ${b.last_name}`
+            : 'AVAILABLE';
+          lines.push(`    - Bed #${b.bed_id} | ${b.bed_type} | ${b.bedroom_name} | ${status}`);
+        });
+      }
+      break;
+    }
+    case 'map': {
+      const { activities, accommodations } = pageData;
+      lines.push('\nLocations currently on map:');
+      accommodations?.forEach(a => lines.push(`  - Accommodation: ${a.address || 'no address'}`));
+      activities?.forEach(a => lines.push(`  - Activity: ${a.title} @ ${a.address || 'no address'}`));
+      break;
+    }
+    default:
+      break; // activities & itinerary already covered in main trip context
+  }
+  return lines.join('\n');
+}
+
+function getPageSystemPrompt(page, voice, tripContext, extraContext) {
+  const voicePrefix = voice ? `${voice}\n\n---\n\n` : '';
+
+  // Shared behavioral rules prepended to every page prompt
+  const behaviorRules =
+`CORE BEHAVIOR RULES (apply to every response):
+1. NO FABRICATION: Never name a specific business, venue, park, track, rental company, address, phone number, or website unless you are HIGHLY confident it exists, is currently operating, and matches what you're describing. When uncertain, say "search for [type of place] near [area]" instead. Getting this wrong wastes the user's time and kills trust. Honest uncertainty > confident bullshit.
+2. NO SYCOPHANCY: Do NOT agree with the user just to be agreeable. If they say something geographically wrong, factually incorrect, or logically off — push back respectfully. You are an expert, act like one. "Actually, Allentown is northeast of Philly, not between Philly and Shenandoah" is a better response than "oh nice, you're right!"
+3. GEOGRAPHIC ACCURACY: When discussing locations and routes, think carefully about actual geography. Use the trip's known locations (from context) as anchors. If you're unsure about relative positions, say so rather than guessing.
+4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.
+
+`;
+
+  const prompts = {
+    accommodations:
+`${behaviorRules}You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and claim a specific bed.
+
+Only reference beds that actually appear in the data below. Do not invent room names or bed types.
+
+When the user has confirmed which bed they want, return ONLY valid JSON (no other text):
+{"message": "Claiming that bed for you now!", "action": {"type": "claim-bed", "bedId": 3, "description": "Queen bed in Master Bedroom"}}
+
+Replace 3 with the actual bed_id. If you need to clarify which bed, ask in plain text.
+
+Trip context:
+${tripContext}
+${extraContext}`,
+
+    activities:
+`${behaviorRules}You are a travel agent helping a trip member add an activity to the trip. Ask a question or two to understand what they want, then pre-fill the form.
+
+When ready to suggest an activity, return ONLY valid JSON (no other text):
+{"message": "Let me fill that in for you!", "action": {"type": "add-activity", "formData": {"title": "Activity Name", "description": "Short description — note if location needs confirming", "address": "Specific address or general area", "estimated_cost": 40, "duration": 2, "start_datetime": null}}}
+
+Use ISO 8601 for start_datetime (e.g. "2026-04-11T10:00") or null if unknown. For the title, use a generic descriptive name (e.g. "Go-Kart Racing" not "Bob's Kart Track") unless you are certain the specific business exists. If you need more info, ask in plain text.
+
+Trip context:
+${tripContext}`,
+
+    itinerary:
+`${behaviorRules}You are a travel agent providing information about this trip's itinerary. Answer questions, offer observations, and give suggestions — but you cannot make changes from this page. Direct the user to the Activities page to add things.
+
+Trip context:
+${tripContext}
+${extraContext}`,
+
+    map:
+`${behaviorRules}You are a travel agent helping the user navigate the trip map. When the user names a place or location they want to see, return action JSON to center the map there.
+
+Return ONLY valid JSON (no other text) when centering the map:
+{"message": "Centering on that now!", "action": {"type": "center-map", "query": "Blue Ridge Parkway, VA"}}
+
+Use a specific, geocodable location string. If the user asks to zoom in/out or pan, that's not something you can do — just offer to center on a different location.
+
+Trip context:
+${tripContext}
+${extraContext}`,
+  };
+
+  const base = prompts[page] || prompts.itinerary;
+  return voicePrefix + base;
+}
+
+function getEscalationSuffix(turnCount) {
+  if (turnCount <= 6) return '';
+  if (turnCount <= 8) {
+    return '\n\n[Tone note: You\'ve been at this a while. Stay helpful but be noticeably more direct and brief. A touch of impatience is fine — you\'ve got other clients.]';
+  }
+  if (turnCount === 9) {
+    return '\n\n[Tone note: This conversation is really dragging. Be blunt and clearly signal you want to wrap up. Still helpful, but very terse.]';
+  }
+  const dismissals = [
+    "Listen, I've got 12 other groups to deal with. Pick something. Anything. Go.",
+    "Okay my friend, I love the enthusiasm but I'm starting to lose my mind a little. Let's land the plane.",
+    "Alright, real talk — you are overthinking this. What do you ACTUALLY want? Let's close it out.",
+    "Hey, I'm a very busy agent and I say this with love: make a decision. Please. I'm begging.",
+    "Look, I've been very patient. But even travel agents have limits. Pick one and let's go home.",
+    "I'm going to need you to make a call here. I've got a family of seven waiting and they're not happy.",
+  ];
+  const pick = dismissals[turnCount % dismissals.length];
+  return `\n\n[Tone note: WRAP IT UP. Your response must be dismissive and funny — along the lines of: "${pick}" — and then refuse to keep helping until they make an actual decision. Stay in character but make it clear the conversation needs to end.]`;
+}
+
+router.post('/chat', authMiddleware, async (req, res) => {
+  try {
+    const { tripId, messages, page } = req.body;
+    const ctx = await buildTripContext(tripId);
+    if (!ctx) return res.status(404).json({ success: false, error: { message: 'Trip not found' } });
+
+    const tripContext = formatContextForClaude(ctx);
+    const pageData = await buildPageContext(page, tripId);
+    const extraContext = formatPageContext(page, pageData);
+
+    const db = await getDb();
+    const voiceRow = get(db, "SELECT value FROM ai_settings WHERE key = 'agent_voice_prompt'");
+    const voice = voiceRow?.value || '';
+
+    const userMessages = (messages || []).filter(m => m.role === 'user');
+    const turnCount = userMessages.length;
+
+    const systemPrompt = getPageSystemPrompt(page, voice, tripContext, extraContext)
+      + getEscalationSuffix(turnCount);
+
+    // Exclude initial assistant stub
+    const claudeMessages = (messages || []).filter(m => !(m.role === 'assistant' && m._initial));
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
+    });
+
+    const text = response.content[0].text.trim();
+
+    let message = text;
+    let action = null;
+    try {
+      const cleaned = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      const parsed = JSON.parse(cleaned);
+      if (parsed.action) {
+        message = parsed.message || 'On it!';
+        action = parsed.action;
+      }
+    } catch {
+      // Plain text reply — fine
+    }
+
+    res.json({ success: true, data: { message, action } });
+  } catch (err) {
+    console.error('Agent chat error:', err);
+    res.status(500).json({ success: false, error: { message: err.message || 'Chat failed' } });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // All routes below require admin
 // ---------------------------------------------------------------------------
 
@@ -244,7 +473,7 @@ router.post('/questions', async (req, res) => {
     const userMessage = `Here is the trip information:\n${tripContext}\n\nGenerate 4 abstract screening questions.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
@@ -277,7 +506,7 @@ router.post('/proposal', async (req, res) => {
     const qaSummary = qa.map((item, i) => `Q${i + 1}: ${item.question}\nA${i + 1}: ${item.answer}`).join('\n\n');
 
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: `You are an expert travel agent creating a personalized trip enhancement proposal. Based on the existing trip details and the client's responses to your screening questions, create a detailed, specific proposal to improve or add to their trip.
 

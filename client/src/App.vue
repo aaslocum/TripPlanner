@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/auth';
 import { useTripStore } from './stores/trip';
 import AppHeader from './components/layout/AppHeader.vue';
 import AppSidebar from './components/layout/AppSidebar.vue';
+import GlobalAgentPanel from './components/agent/GlobalAgentPanel.vue';
 
 const authStore = useAuthStore();
 const tripStore = useTripStore();
@@ -27,6 +28,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
           <router-view />
         </main>
       </div>
+      <GlobalAgentPanel />
     </template>
     <template v-else>
       <router-view />

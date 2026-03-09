@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useTripStore } from '../stores/trip';
+import { useAgentStore } from '../stores/agent';
 import apiClient from '../api/client';
 
 const tripStore = useTripStore();
@@ -99,6 +100,26 @@ async function loadMap() {
 
 watch(() => tripStore.selectedTripId, loadMap);
 onMounted(loadMap);
+
+// Global agent panel — handle center-map action
+const agentStore = useAgentStore();
+watch(() => agentStore.pendingAction, async (action) => {
+  if (!action || action.type !== 'center-map') return;
+  agentStore.clearAction();
+  if (!map) return;
+  try {
+    const { Geocoder } = await loader.importLibrary('geocoding');
+    const geocoder = new Geocoder();
+    const result = await geocoder.geocode({ address: action.query });
+    if (result.results.length > 0) {
+      const pos = result.results[0].geometry.location;
+      map.panTo(pos);
+      map.setZoom(14);
+    }
+  } catch (err) {
+    console.error('Failed to center map:', err.message);
+  }
+});
 </script>
 
 <template>
