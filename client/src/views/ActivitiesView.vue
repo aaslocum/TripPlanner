@@ -200,7 +200,7 @@ onMounted(fetchActivities);
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Activities</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Activities</h2>
       <template v-if="authStore.isAdmin">
         <button v-if="!showForm" @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
           + Add Activity
@@ -212,12 +212,12 @@ onMounted(fetchActivities);
     </div>
 
     <!-- Add/Edit form -->
-    <div v-if="showForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
+    <div v-if="showForm" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
 
       <!-- Google Places search -->
-      <div class="mb-5 pb-5 border-b border-gray-200">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Search Google Places</label>
+      <div class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Google Places</label>
         <div class="relative">
           <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +227,7 @@ onMounted(fetchActivities);
               v-model="searchQuery"
               @input="onSearchInput"
               @focus="showDropdown = predictions.length > 0"
-              class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm"
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg pl-10 pr-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100"
               placeholder="Search for a place, restaurant, attraction..."
             />
             <svg v-if="searching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
@@ -236,15 +236,15 @@ onMounted(fetchActivities);
             </svg>
           </div>
           <!-- Predictions dropdown -->
-          <div v-if="showDropdown && predictions.length > 0" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          <div v-if="showDropdown && predictions.length > 0" class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto">
             <button
               v-for="p in predictions"
               :key="p.place_id"
               @click="selectPrediction(p)"
-              class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
+              class="w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
             >
-              <p class="text-sm font-medium text-gray-900">{{ p.structured_formatting.main_text }}</p>
-              <p class="text-xs text-gray-500">{{ p.structured_formatting.secondary_text }}</p>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ p.structured_formatting.main_text }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.structured_formatting.secondary_text }}</p>
             </button>
           </div>
         </div>
@@ -252,9 +252,9 @@ onMounted(fetchActivities);
       </div>
 
       <!-- Place selected preview -->
-      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-gray-200 bg-green-50 -mx-6 px-6 py-4">
-        <p class="text-sm font-medium text-green-800 mb-2">Auto-filled from Google Places</p>
-        <div class="text-sm text-green-700 space-y-1">
+      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4">
+        <p class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Auto-filled from Google Places</p>
+        <div class="text-sm text-green-700 dark:text-green-300 space-y-1">
           <p v-if="form.title"><span class="font-medium">Title:</span> {{ form.title }}</p>
           <p v-if="form.address"><span class="font-medium">Address:</span> {{ form.address }}</p>
           <p v-if="form.rating"><span class="font-medium">Rating:</span> {{ form.rating }} / 5</p>
@@ -264,36 +264,36 @@ onMounted(fetchActivities);
 
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-          <input v-model="form.title" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Hiking at..." />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+          <input v-model="form.title" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Hiking at..." />
         </div>
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-gray-400 font-normal">(optional)</span></label>
-          <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Details about the activity..."></textarea>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+          <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Details about the activity..."></textarea>
         </div>
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <input v-model="form.address" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="123 Main St..." />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+          <input v-model="form.address" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="123 Main St..." />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-          <input v-model="form.image_url" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image URL</label>
+          <input v-model="form.image_url" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Google Place ID</label>
-          <input v-model="form.google_place_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" readonly />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Google Place ID</label>
+          <input v-model="form.google_place_id" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" readonly />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Start</label>
-          <input v-model="form.start_datetime" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start</label>
+          <input v-model="form.start_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">End</label>
-          <input v-model="form.end_datetime" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End</label>
+          <input v-model="form.end_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Estimated Cost</label>
-          <input v-model="form.estimated_cost" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estimated Cost</label>
+          <input v-model="form.estimated_cost" type="number" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
       </div>
       <button @click="saveActivity" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
@@ -303,12 +303,12 @@ onMounted(fetchActivities);
 
     <!-- Activity panels -->
     <div class="space-y-4">
-      <div v-for="activity in activities" :key="activity.activity_id" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex">
+      <div v-for="activity in activities" :key="activity.activity_id" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex">
         <div v-if="activity.image_url" class="w-64 flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
-        <div v-else class="w-64 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-blue-50 flex items-center justify-center">
-          <svg class="w-12 h-12 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-else class="w-64 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-blue-50 dark:from-indigo-950 dark:to-blue-950 flex items-center justify-center">
+          <svg class="w-12 h-12 text-indigo-300 dark:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -316,36 +316,36 @@ onMounted(fetchActivities);
         <div class="flex-1 p-6">
           <div class="flex items-start justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">{{ activity.title }}</h3>
-              <p v-if="activity.address" class="text-sm text-gray-500 mt-0.5">{{ activity.address }}</p>
-              <p v-if="activity.start_datetime" class="text-sm text-indigo-600 mt-1">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ activity.title }}</h3>
+              <p v-if="activity.address" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ activity.address }}</p>
+              <p v-if="activity.start_datetime" class="text-sm text-indigo-600 dark:text-indigo-400 mt-1">
                 {{ formatDate(activity.start_datetime) }}
                 <span v-if="activity.end_datetime"> - {{ formatDate(activity.end_datetime) }}</span>
               </p>
             </div>
             <div v-if="authStore.isAdmin" class="flex gap-1">
-              <button @click="openEditForm(activity)" class="text-gray-400 hover:text-indigo-600 transition-colors p-1">
+              <button @click="openEditForm(activity)" class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button @click="deleteActivity(activity.activity_id)" class="text-gray-400 hover:text-red-500 transition-colors p-1">
+              <button @click="deleteActivity(activity.activity_id)" class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
             </div>
           </div>
-          <p v-if="activity.description" class="text-sm text-gray-600 mt-3">{{ activity.description }}</p>
+          <p v-if="activity.description" class="text-sm text-gray-600 dark:text-gray-400 mt-3">{{ activity.description }}</p>
           <div class="flex items-center gap-3 mt-3">
-            <span v-if="activity.estimated_cost" class="text-sm bg-green-50 text-green-700 px-2 py-1 rounded-full">${{ activity.estimated_cost }}</span>
-            <span v-if="activity.rating" class="text-sm bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">{{ activity.rating }} stars</span>
+            <span v-if="activity.estimated_cost" class="text-sm bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">${{ activity.estimated_cost }}</span>
+            <span v-if="activity.rating" class="text-sm bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">{{ activity.rating }} stars</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="!loading && activities.length === 0" class="text-center py-16 text-gray-500">
+    <div v-if="!loading && activities.length === 0" class="text-center py-16 text-gray-500 dark:text-gray-400">
       <p class="text-lg">No activities planned yet</p>
       <p class="text-sm mt-1">Add activities to build your trip itinerary</p>
     </div>

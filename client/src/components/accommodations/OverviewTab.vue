@@ -31,9 +31,9 @@ function formatCost(cost) {
 </script>
 
 <template>
-  <div class="flex border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+  <div class="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900">
     <!-- Image carousel -->
-    <div class="relative w-80 shrink-0 bg-gray-100" style="min-height: 280px">
+    <div class="relative w-80 shrink-0 bg-gray-100 dark:bg-gray-800" style="min-height: 280px">
       <img
         v-if="accommodation.images?.length"
         :src="accommodation.images[imageIndex]?.image_url"
@@ -48,13 +48,13 @@ function formatCost(cost) {
       <template v-if="accommodation.images?.length > 1">
         <button
           @click="prevImage"
-          class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition-colors"
+          class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 shadow transition-colors"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
         </button>
         <button
           @click="nextImage"
-          class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-gray-700 shadow transition-colors"
+          class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 shadow transition-colors"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
         </button>
@@ -67,34 +67,34 @@ function formatCost(cost) {
 
     <!-- Stay info -->
     <div class="flex-1 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ accommodation.description || 'Accommodation' }}</h3>
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ accommodation.description || 'Accommodation' }}</h3>
 
       <div class="space-y-3">
         <div class="flex gap-2">
-          <span class="text-sm font-medium text-gray-500 w-28">Address:</span>
-          <span class="text-sm text-gray-900">{{ accommodation.address || 'N/A' }}</span>
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Address:</span>
+          <span class="text-sm text-gray-900 dark:text-gray-100">{{ accommodation.address || 'N/A' }}</span>
         </div>
         <div class="flex gap-2">
-          <span class="text-sm font-medium text-gray-500 w-28">Check-in:</span>
-          <span class="text-sm text-gray-900">{{ formatDate(accommodation.check_in_datetime) }}</span>
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Check-in:</span>
+          <span class="text-sm text-gray-900 dark:text-gray-100">{{ formatDate(accommodation.check_in_datetime) }}</span>
         </div>
         <div class="flex gap-2">
-          <span class="text-sm font-medium text-gray-500 w-28">Check-out:</span>
-          <span class="text-sm text-gray-900">{{ formatDate(accommodation.check_out_datetime) }}</span>
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Check-out:</span>
+          <span class="text-sm text-gray-900 dark:text-gray-100">{{ formatDate(accommodation.check_out_datetime) }}</span>
         </div>
         <div class="flex gap-2">
-          <span class="text-sm font-medium text-gray-500 w-28">Total Cost:</span>
-          <span class="text-sm font-semibold text-gray-900">{{ formatCost(accommodation.total_cost) }}</span>
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Total Cost:</span>
+          <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ formatCost(accommodation.total_cost) }}</span>
         </div>
       </div>
 
       <!-- Airbnb link -->
-      <div v-if="accommodation.airbnb_url" class="mt-5 pt-4 border-t border-gray-100">
+      <div v-if="accommodation.airbnb_url" class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
         <a
           :href="accommodation.airbnb_url"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors"
+          class="inline-flex items-center gap-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm5.5 17.4c-.3.6-.8 1-1.4 1.2-.2 0-.3.1-.5.1-.4 0-.8-.1-1.2-.4-1-.6-1.9-1.7-2.8-3-.4-.6-.8-1.2-1.1-1.8-.7 1.8-1.5 3.2-2.4 4-.5.5-1.1.8-1.7.8h-.2c-.7-.1-1.3-.5-1.6-1.2-.3-.6-.3-1.3-.1-2.1.5-1.7 1.6-3.5 3.2-5.3-.3-.8-.5-1.6-.6-2.4-.2-1.2-.1-2.2.3-3 .3-.6.8-1 1.4-1.1h.3c.5 0 1 .2 1.3.7.3.4.4 1 .4 1.6 0 .9-.2 2-.7 3.3.5.9 1.1 1.8 1.7 2.5.4.5.8.9 1.2 1.3.7-.2 1.3-.3 1.9-.3.9 0 1.6.2 2 .7.3.4.4.8.3 1.3-.1.4-.2.8-.4 1.1z"/>

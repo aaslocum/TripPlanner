@@ -53,9 +53,9 @@ watch(() => props.accommodation.address, initMap);
 
 <template>
   <div>
-    <h3 class="text-lg font-semibold text-gray-900 mb-2">Location</h3>
-    <p class="text-sm text-gray-500 mb-4">{{ accommodation.address || 'No address set' }}</p>
-    <div v-if="accommodation.address" ref="mapContainer" class="w-full h-96 rounded-lg overflow-hidden border border-gray-200"></div>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Location</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ accommodation.address || 'No address set' }}</p>
+    <div v-if="accommodation.address" ref="mapContainer" class="w-full h-96 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"></div>
     <p v-else class="text-sm text-gray-400">Add an address to see the location on the map.</p>
   </div>
 </template>

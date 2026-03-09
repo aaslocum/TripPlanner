@@ -285,7 +285,7 @@ onMounted(fetchAccommodations);
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Accommodations</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Accommodations</h2>
       <template v-if="authStore.isAdmin">
         <button v-if="!showForm" @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
           + Add Accommodation
@@ -297,16 +297,16 @@ onMounted(fetchAccommodations);
     </div>
 
     <!-- Add/Edit form -->
-    <div v-if="showForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingId ? 'Edit Accommodation' : 'New Accommodation' }}</h3>
+    <div v-if="showForm" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ editingId ? 'Edit Accommodation' : 'New Accommodation' }}</h3>
 
       <!-- Airbnb URL paste section -->
-      <div class="mb-5 pb-5 border-b border-gray-200">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Paste Airbnb Link</label>
+      <div class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paste Airbnb Link</label>
         <div class="flex gap-2">
           <input
             v-model="airbnbUrl"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100"
             placeholder="https://www.airbnb.com/rooms/..."
             @keyup.enter="scrapeUrl"
           />
@@ -327,9 +327,9 @@ onMounted(fetchAccommodations);
       </div>
 
       <!-- Scrape preview -->
-      <div v-if="scrapeSuccess" class="mb-5 pb-5 border-b border-gray-200 bg-green-50 -mx-6 px-6 py-4">
-        <p class="text-sm font-medium text-green-800 mb-2">Auto-filled from Airbnb</p>
-        <div class="text-sm text-green-700 space-y-1">
+      <div v-if="scrapeSuccess" class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4">
+        <p class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Auto-filled from Airbnb</p>
+        <div class="text-sm text-green-700 dark:text-green-300 space-y-1">
           <p v-if="form.description"><span class="font-medium">Description:</span> {{ form.description }}</p>
           <p v-if="form.address"><span class="font-medium">Address:</span> {{ form.address }}</p>
           <p v-if="form.check_in_datetime"><span class="font-medium">Check-in:</span> {{ form.check_in_datetime.replace('T', ' ') }}</p>
@@ -337,29 +337,29 @@ onMounted(fetchAccommodations);
           <p v-if="scrapedImages.length"><span class="font-medium">Photos:</span> {{ scrapedImages.length }} images</p>
         </div>
         <div v-if="scrapedBedrooms.length" class="mt-3">
-          <p class="text-sm font-medium text-green-800 mb-1">Bedrooms ({{ scrapedBedrooms.length }})</p>
+          <p class="text-sm font-medium text-green-800 dark:text-green-300 mb-1">Bedrooms ({{ scrapedBedrooms.length }})</p>
           <div class="grid grid-cols-3 gap-2">
-            <div v-for="(br, i) in scrapedBedrooms" :key="i" class="bg-white rounded-lg overflow-hidden border border-green-200">
+            <div v-for="(br, i) in scrapedBedrooms" :key="i" class="bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-green-200 dark:border-green-800">
               <img v-if="br.image_url" :src="br.image_url" class="w-full h-20 object-cover" />
               <div class="px-3 py-2">
-                <p class="text-xs font-medium text-gray-800">{{ br.name }}</p>
-                <p class="text-xs text-gray-500">{{ br.bed_description }}</p>
+                <p class="text-xs font-medium text-gray-800 dark:text-gray-200">{{ br.name }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ br.bed_description }}</p>
               </div>
             </div>
           </div>
-          <p class="text-xs text-green-600 mt-2">Bedrooms, beds, and images will be created automatically on save.</p>
+          <p class="text-xs text-green-600 dark:text-green-400 mt-2">Bedrooms, beds, and images will be created automatically on save.</p>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <input v-model="form.description" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Cozy mountain cabin..." />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+          <input v-model="form.description" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Cozy mountain cabin..." />
         </div>
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
           <div class="relative">
-            <input v-model="form.address" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="123 Main St..." />
+            <input v-model="form.address" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="123 Main St..." />
             <!-- Google Places address search -->
             <div class="mt-2 relative">
               <div class="relative">
@@ -370,7 +370,7 @@ onMounted(fetchAccommodations);
                   v-model="addressQuery"
                   @input="onAddressInput"
                   @focus="showAddressDropdown = addressPredictions.length > 0"
-                  class="w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm bg-gray-50"
+                  class="w-full border border-gray-200 dark:border-gray-600 rounded-lg pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-100"
                   placeholder="Search for an address..."
                 />
                 <svg v-if="addressSearching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
@@ -378,35 +378,35 @@ onMounted(fetchAccommodations);
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
               </div>
-              <div v-if="showAddressDropdown && addressPredictions.length > 0" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <div v-if="showAddressDropdown && addressPredictions.length > 0" class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 <button
                   v-for="p in addressPredictions"
                   :key="p.place_id"
                   @click="selectAddressPrediction(p)"
-                  class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  class="w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                 >
-                  <p class="text-sm font-medium text-gray-900">{{ p.structured_formatting.main_text }}</p>
-                  <p class="text-xs text-gray-500">{{ p.structured_formatting.secondary_text }}</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ p.structured_formatting.main_text }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.structured_formatting.secondary_text }}</p>
                 </button>
               </div>
             </div>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Airbnb ID</label>
-          <input v-model="form.airbnb_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Airbnb ID</label>
+          <input v-model="form.airbnb_id" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Total Cost</label>
-          <input v-model="form.total_cost" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Cost</label>
+          <input v-model="form.total_cost" type="number" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-          <input v-model="form.check_in_datetime" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Check-in</label>
+          <input v-model="form.check_in_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-          <input v-model="form.check_out_datetime" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Check-out</label>
+          <input v-model="form.check_out_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
       </div>
       <button @click="saveAccommodation" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
@@ -421,15 +421,15 @@ onMounted(fetchAccommodations);
         :key="acc.accommodation_id"
         @click="selectAccommodation(acc.accommodation_id)"
         class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        :class="selectedAccommodation?.accommodation_id === acc.accommodation_id ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'"
+        :class="selectedAccommodation?.accommodation_id === acc.accommodation_id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
       >
         {{ acc.description || `Accommodation ${acc.accommodation_id}` }}
       </button>
     </div>
 
     <!-- Tabs -->
-    <div v-if="selectedAccommodation" class="bg-white rounded-xl shadow-sm border border-gray-200">
-      <div class="border-b border-gray-200">
+    <div v-if="selectedAccommodation" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between px-4 pt-2">
           <nav class="flex gap-0">
             <button
@@ -437,16 +437,16 @@ onMounted(fetchAccommodations);
               :key="tab.id"
               @click="activeTab = tab.id"
               class="px-6 py-3 text-sm font-medium border-b-2 transition-colors"
-              :class="activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+              :class="activeTab === tab.id ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
             >
               {{ tab.label }}
             </button>
           </nav>
           <div v-if="authStore.isAdmin" class="flex gap-2 pb-1">
-            <button @click="openEditForm(selectedAccommodation)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded hover:bg-indigo-50">
+            <button @click="openEditForm(selectedAccommodation)" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950">
               Edit
             </button>
-            <button @click="deleteAccommodation(selectedAccommodation.accommodation_id)" class="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50">
+            <button @click="deleteAccommodation(selectedAccommodation.accommodation_id)" class="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950">
               Delete
             </button>
           </div>
@@ -462,7 +462,7 @@ onMounted(fetchAccommodations);
       </div>
     </div>
 
-    <div v-else-if="!loading" class="text-center py-16 text-gray-500">
+    <div v-else-if="!loading" class="text-center py-16 text-gray-500 dark:text-gray-400">
       <p class="text-lg">No accommodations yet</p>
       <p class="text-sm mt-1">Add your first accommodation to get started</p>
     </div>

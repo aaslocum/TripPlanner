@@ -114,23 +114,23 @@ onMounted(() => {
 <template>
   <div>
     <!-- Current attendees -->
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Trip Attendees</h3>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Trip Attendees</h3>
 
     <div v-if="members.length" class="space-y-2 mb-6">
       <div
         v-for="member in members"
         :key="member.user_id"
-        class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3"
+        class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3"
       >
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-semibold">
+          <div class="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-semibold">
             {{ initials(member) }}
           </div>
           <div>
-            <p class="text-sm font-medium text-gray-900">{{ displayName(member) }}</p>
-            <p v-if="showEmail(member) && (member.first_name || member.last_name)" class="text-xs text-gray-500">{{ member.email }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ displayName(member) }}</p>
+            <p v-if="showEmail(member) && (member.first_name || member.last_name)" class="text-xs text-gray-500 dark:text-gray-400">{{ member.email }}</p>
           </div>
-          <span v-if="member.role === 'admin'" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Admin</span>
+          <span v-if="member.role === 'admin'" class="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">Admin</span>
         </div>
         <button
           v-if="authStore.isAdmin"
@@ -144,37 +144,37 @@ onMounted(() => {
         </button>
       </div>
     </div>
-    <p v-else class="text-sm text-gray-500 mb-6">No attendees yet.</p>
+    <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-6">No attendees yet.</p>
 
     <!-- Admin-only: add attendees -->
     <template v-if="authStore.isAdmin">
       <!-- Bulk import -->
-      <div class="border-t border-gray-200 pt-5">
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
         <button
           v-if="!showBulkImport"
           @click="showBulkImport = true"
-          class="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
         >
           + Bulk Import from Email List
         </button>
 
         <div v-else>
-          <h4 class="text-sm font-medium text-gray-700 mb-1">Paste Email List</h4>
+          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paste Email List</h4>
           <p class="text-xs text-gray-400 mb-2">Comma-separated. Supports: Name &lt;email&gt; or just email</p>
           <textarea
             v-model="bulkText"
             @input="parseBulkInput"
             rows="3"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono dark:bg-gray-800 dark:text-gray-100"
             placeholder="Nina Samuel <nina@example.com>, john@example.com, ..."
           ></textarea>
 
           <!-- Preview parsed entries -->
           <div v-if="bulkParsed.length" class="mt-2 mb-3">
-            <p class="text-xs text-gray-500 mb-1">{{ bulkParsed.length }} attendee{{ bulkParsed.length === 1 ? '' : 's' }} found:</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ bulkParsed.length }} attendee{{ bulkParsed.length === 1 ? '' : 's' }} found:</p>
             <div class="max-h-40 overflow-y-auto space-y-1">
-              <div v-for="(entry, idx) in bulkParsed" :key="idx" class="flex items-center gap-2 text-xs bg-gray-50 rounded px-3 py-1.5">
-                <span class="text-gray-900 font-medium">{{ entry.first_name }} {{ entry.last_name }}</span>
+              <div v-for="(entry, idx) in bulkParsed" :key="idx" class="flex items-center gap-2 text-xs bg-gray-50 dark:bg-gray-800 rounded px-3 py-1.5">
+                <span class="text-gray-900 dark:text-gray-100 font-medium">{{ entry.first_name }} {{ entry.last_name }}</span>
                 <span class="text-gray-400">{{ entry.email }}</span>
               </div>
             </div>
@@ -192,18 +192,18 @@ onMounted(() => {
               </svg>
               {{ importing ? 'Importing...' : `Import ${bulkParsed.length} Attendee${bulkParsed.length === 1 ? '' : 's'}` }}
             </button>
-            <button @click="showBulkImport = false; bulkText = ''; bulkParsed = []" class="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">Cancel</button>
+            <button @click="showBulkImport = false; bulkText = ''; bulkParsed = []" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-4 py-2">Cancel</button>
           </div>
         </div>
       </div>
 
       <!-- Add existing user -->
-      <div class="border-t border-gray-200 pt-5 mt-5">
-        <h4 class="text-sm font-medium text-gray-700 mb-2">Add Existing User</h4>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-5 mt-5">
+        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add Existing User</h4>
         <div class="flex gap-2">
           <select
             v-model="selectedUserId"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100"
           >
             <option value="" disabled>Select a user...</option>
             <option v-for="user in availableUsers" :key="user.user_id" :value="user.user_id">
@@ -222,29 +222,29 @@ onMounted(() => {
       </div>
 
       <!-- Create new user inline -->
-      <div class="border-t border-gray-200 pt-5 mt-5">
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-5 mt-5">
         <button
           v-if="!showNewUserForm"
           @click="showNewUserForm = true"
-          class="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
         >
           + Create New Attendee
         </button>
 
         <div v-else>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">New Attendee</h4>
+          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Attendee</h4>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs text-gray-500 mb-1">First Name</label>
-              <input v-model="newUser.first_name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Jane" />
+              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">First Name</label>
+              <input v-model="newUser.first_name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Jane" />
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">Last Name</label>
-              <input v-model="newUser.last_name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Doe" />
+              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Last Name</label>
+              <input v-model="newUser.last_name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Doe" />
             </div>
             <div class="col-span-2">
-              <label class="block text-xs text-gray-500 mb-1">Email</label>
-              <input v-model="newUser.email" type="email" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="jane@example.com" />
+              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+              <input v-model="newUser.email" type="email" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="jane@example.com" />
             </div>
           </div>
           <div class="flex gap-2 mt-3">
@@ -255,7 +255,7 @@ onMounted(() => {
             >
               Create & Add
             </button>
-            <button @click="showNewUserForm = false" class="text-sm text-gray-500 hover:text-gray-700 px-4 py-2">Cancel</button>
+            <button @click="showNewUserForm = false" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-4 py-2">Cancel</button>
           </div>
         </div>
       </div>

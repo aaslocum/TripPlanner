@@ -103,17 +103,17 @@ onMounted(loadMap);
 
 <template>
   <div>
-    <h2 class="text-2xl font-bold text-gray-900 mb-6">Map</h2>
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Map</h2>
 
     <div class="flex gap-4 mb-4">
-      <div class="flex items-center gap-2 text-sm text-gray-600">
+      <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <span class="w-3 h-3 rounded-full bg-indigo-600"></span> Accommodations
       </div>
-      <div class="flex items-center gap-2 text-sm text-gray-600">
+      <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <span class="w-3 h-3 rounded-full bg-emerald-600"></span> Activities
       </div>
     </div>
 
-    <div ref="mapContainer" class="w-full h-[600px] rounded-xl overflow-hidden border border-gray-200 bg-gray-100"></div>
+    <div ref="mapContainer" class="w-full h-[600px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"></div>
   </div>
 </template>

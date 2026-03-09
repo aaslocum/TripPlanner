@@ -18,14 +18,14 @@ const defaultAmenities = [
 
 <template>
   <div>
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
-    <p class="text-sm text-gray-500 mb-4">Amenities can be customized per accommodation in a future update.</p>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Amenities</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Amenities can be customized per accommodation in a future update.</p>
     <div class="grid grid-cols-3 gap-3">
-      <div v-for="amenity in defaultAmenities" :key="amenity.icon" class="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+      <div v-for="amenity in defaultAmenities" :key="amenity.icon" class="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
-        <span class="text-sm text-gray-700">{{ amenity.label }}</span>
+        <span class="text-sm text-gray-700 dark:text-gray-300">{{ amenity.label }}</span>
       </div>
     </div>
   </div>

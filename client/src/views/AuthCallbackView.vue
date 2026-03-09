@@ -21,6 +21,6 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen flex items-center justify-center">
-    <p class="text-gray-500">Signing you in...</p>
+    <p class="text-gray-500 dark:text-gray-400">Signing you in...</p>
   </div>
 </template>

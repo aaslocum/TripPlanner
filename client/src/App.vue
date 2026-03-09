@@ -17,7 +17,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
     <template v-if="authStore.isAuthenticated">
       <AppHeader />
       <div class="flex">

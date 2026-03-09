@@ -18,14 +18,14 @@ const adminItems = [
 </script>
 
 <template>
-  <aside class="fixed left-0 top-16 bottom-0 w-56 bg-white border-r border-gray-200 p-4">
+  <aside class="fixed left-0 top-16 bottom-0 w-56 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4">
     <nav class="space-y-1">
       <router-link
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
         class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-        :class="route.path === item.path ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'"
+        :class="route.path === item.path ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
       >
         <!-- Home icon -->
         <svg v-if="item.icon === 'home'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,14 +48,14 @@ const adminItems = [
 
       <!-- Admin section -->
       <template v-if="authStore.isAdmin">
-        <div class="pt-4 mt-4 border-t border-gray-200">
-          <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin</p>
+        <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+          <p class="px-3 text-xs font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-2">Admin</p>
           <router-link
             v-for="item in adminItems"
             :key="item.path"
             :to="item.path"
             class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            :class="route.path === item.path ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'"
+            :class="route.path === item.path ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
