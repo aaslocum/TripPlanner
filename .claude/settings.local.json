@@ -62,7 +62,26 @@
       "Bash(tasklist)",
       "Bash(curl -s http://localhost:3000/api/trips/1 -X PUT -H \"Content-Type: application/json\" -d '{\"\"trip_name\"\": \"\"Alex''''s 40th Birthday Getaway\"\", \"\"start_date\"\": \"\"2026-04-17\"\", \"\"end_date\"\": \"\"2026-04-20\"\"}')",
       "Bash(curl -s http://localhost:3000/api/users/11 -X PUT -H \"Content-Type: application/json\" -d '{\"\"first_name\"\": \"\"Mel\"\", \"\"last_name\"\": \"\"Taillon\"\"}')",
-      "Bash(chmod +x /c/Users/alxsl/TripPlanner/deploy.sh)"
+      "Bash(chmod +x /c/Users/alxsl/TripPlanner/deploy.sh)",
+      "Bash(ssh root@casinowendle.com \"journalctl -u tripplanner -n 30 --no-pager 2>&1\")",
+      "Bash(ssh root@casinowendle.com \"systemctl stop tripplanner; fuser -k 3000/tcp 2>/dev/null; sleep 1; fuser 3000/tcp 2>/dev/null && echo ''still in use'' || echo ''port 3000 free''\")",
+      "Bash(ssh root@casinowendle.com \"systemctl stop tripplanner; kill -9 734108 2>/dev/null; sleep 2; fuser 3000/tcp 2>/dev/null && echo ''still in use'' || echo ''port 3000 free''\")",
+      "Bash(ssh root@casinowendle.com \"systemctl disable tripplanner; systemctl stop tripplanner; sleep 3; fuser 3000/tcp 2>/dev/null && echo ''still in use'' || echo ''port 3000 free''\")",
+      "Bash(ssh root@casinowendle.com \"ps aux | grep ''[n]ode.*index.js'' | head -5\")",
+      "Bash(ssh root@casinowendle.com \"kill -9 734244; sleep 1; fuser 3000/tcp 2>/dev/null && echo ''still in use'' || echo ''port 3000 free''\")",
+      "Bash(ssh root@casinowendle.com \"systemctl is-active tripplanner; systemctl show tripplanner --property=ActiveState,SubState,MainPID\")",
+      "Bash(ssh root@casinowendle.com \"ps aux | grep 3305 | head -5\")",
+      "Bash(ssh root@casinowendle.com \"cd /root/TripPlanner/server && node -e \"\":*)",
+      "Bash(ssh root@casinowendle.com \"cd /root/TripPlanner && git pull\")",
+      "Bash(ssh root@casinowendle.com \"cd /root/TripPlanner && git log --oneline -5\")",
+      "Bash(ssh root@casinowendle.com \"cd /root/TripPlanner && git checkout HEAD -- server/data/tripplanner.db && cd server && node -e \"\":*)",
+      "Bash(ssh root@casinowendle.com \"pm2 save --force && pm2 unstartup systemd 2>/dev/null; systemctl enable tripplanner && systemctl start tripplanner && sleep 2 && systemctl status tripplanner --no-pager\")",
+      "Bash(ssh root@casinowendle.com \"curl -s http://localhost:3000/api/trips | head -200\")",
+      "Bash(ssh root@casinowendle.com \"curl -s https://casinowendle.com/api/auth/me -o /dev/null -w ''%{http_code}''; echo ''''; curl -s https://casinowendle.com -o /dev/null -w ''%{http_code}''\")",
+      "Bash(xargs grep -l -i \"activit\")",
+      "Bash(npm install @anthropic-ai/sdk --save)",
+      "Bash(node_modules/.bin/vite build)",
+      "Bash(taskkill //F //IM node.exe)"
     ]
   }
 }

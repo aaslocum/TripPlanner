@@ -1,0 +1,1 @@
+ALTER TABLE activities ADD COLUMN is_suggested INTEGER NOT NULL DEFAULT 0;

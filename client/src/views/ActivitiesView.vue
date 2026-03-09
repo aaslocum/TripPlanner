@@ -4,6 +4,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
 import apiClient from '../api/client';
+import ActivityAgentChat from '../components/activities/ActivityAgentChat.vue';
 
 const authStore = useAuthStore();
 const tripStore = useTripStore();
@@ -11,8 +12,17 @@ const activities = ref([]);
 const loading = ref(false);
 const showForm = ref(false);
 const editingId = ref(null);
-const emptyForm = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
+const emptyForm = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', duration: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
 const form = ref({ ...emptyForm });
+const showChat = ref(false);
+
+function onAgentFill(data) {
+  if (data.title) form.value.title = data.title;
+  if (data.description) form.value.description = data.description;
+  if (data.address) form.value.address = data.address;
+  if (data.estimated_cost != null) form.value.estimated_cost = data.estimated_cost;
+  if (data.duration != null) form.value.duration = data.duration;
+}
 
 // Google Places search
 const searchQuery = ref('');
@@ -124,7 +134,16 @@ function resetForm() {
 
 function openAddForm() {
   resetForm();
+  if (tripStore.selectedTrip?.start_date) {
+    form.value.start_datetime = `${tripStore.selectedTrip.start_date}T09:00`;
+  }
   showForm.value = true;
+}
+
+function durationFromDatetimes(start, end) {
+  if (!start || !end) return '';
+  const hours = (new Date(end) - new Date(start)) / 3600000;
+  return hours > 0 ? hours : '';
 }
 
 function openEditForm(activity) {
@@ -135,7 +154,7 @@ function openEditForm(activity) {
     image_url: activity.image_url || '',
     google_place_id: activity.google_place_id || '',
     start_datetime: activity.start_datetime || '',
-    end_datetime: activity.end_datetime || '',
+    duration: durationFromDatetimes(activity.start_datetime, activity.end_datetime),
     estimated_cost: activity.estimated_cost || '',
     address: activity.address || '',
     latitude: activity.latitude || null,
@@ -166,10 +185,17 @@ async function fetchActivities() {
 }
 
 async function saveActivity() {
+  let end_datetime = null;
+  if (form.value.start_datetime && form.value.duration) {
+    const endMs = new Date(form.value.start_datetime).getTime() + Number(form.value.duration) * 3600000;
+    end_datetime = new Date(endMs).toISOString().slice(0, 16);
+  }
+  const { duration, ...rest } = form.value;
   const payload = {
-    ...form.value,
+    ...rest,
     trip_id: tripStore.selectedTripId,
     estimated_cost: form.value.estimated_cost ? Number(form.value.estimated_cost) : null,
+    end_datetime,
   };
 
   if (editingId.value) {
@@ -200,16 +226,27 @@ onMounted(fetchActivities);
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6 gap-3">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Activities</h2>
-      <template v-if="authStore.isAdmin">
-        <button v-if="!showForm" @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+      <div v-if="!showForm">
+        <button @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
           + Add Activity
         </button>
-        <button v-else @click="cancelForm" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+      </div>
+      <div v-else class="flex items-center gap-2 flex-wrap justify-end">
+        <button v-if="!editingId" @click="showChat = true" type="button" class="bg-violet-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          Ask the Agent
+        </button>
+        <button @click="saveActivity" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+          {{ editingId ? 'Update' : 'Save' }}
+        </button>
+        <button @click="cancelForm" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
           Cancel
         </button>
-      </template>
+      </div>
     </div>
 
     <!-- Add/Edit form -->
@@ -289,18 +326,23 @@ onMounted(fetchActivities);
           <input v-model="form.start_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End</label>
-          <input v-model="form.end_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (hours)</label>
+          <input v-model="form.duration" type="number" min="0.5" step="0.5" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 2 or 1.5" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estimated Cost</label>
           <input v-model="form.estimated_cost" type="number" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
         </div>
       </div>
-      <button @click="saveActivity" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-        {{ editingId ? 'Update' : 'Save' }}
-      </button>
     </div>
+
+    <!-- Travel Agent Chat -->
+    <ActivityAgentChat
+      v-if="showChat"
+      :trip-id="tripStore.selectedTripId"
+      @fill="onAgentFill"
+      @close="showChat = false"
+    />
 
     <!-- Activity panels -->
     <div class="space-y-4">
@@ -317,7 +359,12 @@ onMounted(fetchActivities);
         <div class="flex-1 p-4 md:p-6">
           <div class="flex items-start justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ activity.title }}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ activity.title }}</h3>
+                <span v-if="activity.is_suggested" class="text-xs bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
+                  Suggested
+                </span>
+              </div>
               <p v-if="activity.address" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ activity.address }}</p>
               <p v-if="activity.start_datetime" class="text-sm text-indigo-600 dark:text-indigo-400 mt-1">
                 {{ formatDate(activity.start_datetime) }}

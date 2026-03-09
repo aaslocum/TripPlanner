@@ -48,6 +48,18 @@ const routes = [
     component: () => import('../views/UsersView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/travel-agent',
+    name: 'TravelAgent',
+    component: () => import('../views/TravelAgentView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/ai-settings',
+    name: 'AiSettings',
+    component: () => import('../views/AiSettingsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ];
 
 const router = createRouter({

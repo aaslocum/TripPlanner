@@ -19,6 +19,9 @@ import activityRoutes from './routes/activities.js';
 import imageRoutes from './routes/images.js';
 import scrapeRoutes from './routes/scrape.js';
 import bedroomClaimRoutes from './routes/bedroomClaims.js';
+import proposalRoutes from './routes/proposals.js';
+import agentRoutes from './routes/agent.js';
+import aiSettingsRoutes from './routes/ai-settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -57,6 +60,9 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/scrape', scrapeRoutes);
 app.use('/api/bedroom-claims', bedroomClaimRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/agent', agentRoutes);
+app.use('/api/ai-settings', aiSettingsRoutes);
 
 // Serve client in production
 if (config.nodeEnv === 'production') {

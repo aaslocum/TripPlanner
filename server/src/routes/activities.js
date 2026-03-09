@@ -22,14 +22,15 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, data: activity });
 });
 
-// Create activity
-router.post('/', adminMiddleware, async (req, res) => {
+// Create activity — open to all authenticated users; non-admins are tagged as suggested
+router.post('/', async (req, res) => {
   const { trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url } = req.body;
+  const is_suggested = req.user.role === 'admin' ? 0 : 1;
   const db = await getDb();
   const result = run(db, `
-    INSERT INTO activities (trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address || null, latitude || null, longitude || null, rating || null, source_url || null]);
+    INSERT INTO activities (trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address, latitude, longitude, rating, source_url, is_suggested)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [trip_id, title, description, image_url, google_place_id, start_datetime, end_datetime, estimated_cost, address || null, latitude || null, longitude || null, rating || null, source_url || null, is_suggested]);
   const activity = get(db, 'SELECT * FROM activities WHERE activity_id = ?', [result.lastInsertRowid]);
   res.status(201).json({ success: true, data: activity });
 });

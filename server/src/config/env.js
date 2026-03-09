@@ -15,4 +15,5 @@ export default {
   baseUrl: process.env.BASE_URL || '',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV || 'development',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
 };

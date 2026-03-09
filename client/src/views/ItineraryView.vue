@@ -64,6 +64,9 @@ onMounted(fetchItinerary);
                 <span class="text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded-full text-white" :class="eventColor(event.type)">
                   {{ event.type === 'check_in' ? 'Check-in' : event.type === 'check_out' ? 'Check-out' : 'Activity' }}
                 </span>
+                <span v-if="event.type === 'activity' && event.details?.is_suggested" class="text-xs bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
+                  Suggested
+                </span>
                 <span v-if="event.datetime" class="text-sm text-gray-500 dark:text-gray-400">{{ formatTime(event.datetime) }}</span>
                 <span v-if="event.end_datetime" class="text-sm text-gray-400">- {{ formatTime(event.end_datetime) }}</span>
               </div>

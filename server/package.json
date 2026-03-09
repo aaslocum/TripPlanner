@@ -7,7 +7,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
-    "sql.js": "^1.11.0",
+    "@anthropic-ai/sdk": "^0.78.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.0",
@@ -15,7 +15,8 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
+    "passport-google-oauth20": "^2.0.0",
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
