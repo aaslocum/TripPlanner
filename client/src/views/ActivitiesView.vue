@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue';
+import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
 import apiClient from '../api/client';
@@ -9,40 +10,114 @@ const tripStore = useTripStore();
 const activities = ref([]);
 const loading = ref(false);
 const showForm = ref(false);
-const form = ref({ title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', source_url: '' });
+const form = ref({ title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' });
 
-// Google Place URL scraping
-const placeUrl = ref('');
-const scraping = ref(false);
-const scrapeError = ref('');
-const scrapeSuccess = ref(false);
+// Google Places search
+const searchQuery = ref('');
+const predictions = ref([]);
+const searching = ref(false);
+const placeSelected = ref(false);
+const showDropdown = ref(false);
 
-function resetForm() {
-  form.value = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', source_url: '' };
-  placeUrl.value = '';
-  scrapeError.value = '';
-  scrapeSuccess.value = false;
+let autocompleteService = null;
+let placesService = null;
+let sessionToken = null;
+let debounceTimer = null;
+
+const loader = new Loader({
+  apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  version: 'weekly',
+  libraries: ['places'],
+});
+
+async function initPlaces() {
+  await loader.importLibrary('places');
+  autocompleteService = new google.maps.places.AutocompleteService();
+  const div = document.createElement('div');
+  placesService = new google.maps.places.PlacesService(div);
+  sessionToken = new google.maps.places.AutocompleteSessionToken();
 }
 
-async function scrapeUrl() {
-  if (!placeUrl.value.trim()) return;
-  scraping.value = true;
-  scrapeError.value = '';
-  scrapeSuccess.value = false;
-  try {
-    const { data } = await apiClient.post('/scrape', { url: placeUrl.value.trim() });
-    const d = data.data;
-    if (d.title) form.value.title = d.title;
-    if (d.description) form.value.description = d.description;
-    if (d.image_url) form.value.image_url = d.image_url;
-    if (d.address) form.value.address = d.address;
-    form.value.source_url = placeUrl.value.trim();
-    scrapeSuccess.value = true;
-  } catch (err) {
-    scrapeError.value = err.response?.data?.error || 'Failed to fetch place details';
-  } finally {
-    scraping.value = false;
+function onSearchInput() {
+  clearTimeout(debounceTimer);
+  placeSelected.value = false;
+
+  if (!searchQuery.value.trim()) {
+    predictions.value = [];
+    showDropdown.value = false;
+    return;
   }
+
+  debounceTimer = setTimeout(async () => {
+    if (!autocompleteService) await initPlaces();
+    searching.value = true;
+    autocompleteService.getPlacePredictions(
+      { input: searchQuery.value, sessionToken },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          predictions.value = results;
+          showDropdown.value = true;
+        } else {
+          predictions.value = [];
+          showDropdown.value = false;
+        }
+        searching.value = false;
+      }
+    );
+  }, 300);
+}
+
+function selectPrediction(prediction) {
+  predictions.value = [];
+  showDropdown.value = false;
+  searchQuery.value = prediction.description;
+  searching.value = true;
+
+  placesService.getDetails(
+    {
+      placeId: prediction.place_id,
+      fields: ['name', 'formatted_address', 'geometry', 'rating', 'photos', 'editorial_summary', 'url', 'place_id'],
+      sessionToken,
+    },
+    (place, status) => {
+      searching.value = false;
+      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+        form.value.title = place.name || '';
+        form.value.address = place.formatted_address || '';
+        form.value.google_place_id = place.place_id || '';
+        form.value.source_url = place.url || '';
+
+        if (place.editorial_summary?.text) {
+          form.value.description = place.editorial_summary.text;
+        }
+
+        if (place.geometry?.location) {
+          form.value.latitude = place.geometry.location.lat();
+          form.value.longitude = place.geometry.location.lng();
+        }
+
+        if (place.rating) {
+          form.value.rating = place.rating;
+        }
+
+        if (place.photos?.length > 0) {
+          form.value.image_url = place.photos[0].getUrl({ maxWidth: 800 });
+        }
+
+        placeSelected.value = true;
+        // New session token for next search
+        sessionToken = new google.maps.places.AutocompleteSessionToken();
+      }
+    }
+  );
+}
+
+function resetForm() {
+  form.value = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
+  searchQuery.value = '';
+  predictions.value = [];
+  placeSelected.value = false;
+  showDropdown.value = false;
 }
 
 async function fetchActivities() {
@@ -93,39 +168,49 @@ onMounted(fetchActivities);
 
     <!-- Add form -->
     <div v-if="showForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <!-- Google Place URL paste section -->
+      <!-- Google Places search -->
       <div class="mb-5 pb-5 border-b border-gray-200">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Paste Google Maps Link</label>
-        <div class="flex gap-2">
-          <input
-            v-model="placeUrl"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            placeholder="https://share.google/... or https://maps.google.com/..."
-            @keyup.enter="scrapeUrl"
-          />
-          <button
-            @click="scrapeUrl"
-            :disabled="scraping || !placeUrl.trim()"
-            class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-          >
-            <svg v-if="scraping" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Search Google Places</label>
+        <div class="relative">
+          <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              v-model="searchQuery"
+              @input="onSearchInput"
+              @focus="showDropdown = predictions.length > 0"
+              class="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm"
+              placeholder="Search for a place, restaurant, attraction..."
+            />
+            <svg v-if="searching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
-            {{ scraping ? 'Fetching...' : 'Auto-fill' }}
-          </button>
+          </div>
+          <!-- Predictions dropdown -->
+          <div v-if="showDropdown && predictions.length > 0" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+            <button
+              v-for="p in predictions"
+              :key="p.place_id"
+              @click="selectPrediction(p)"
+              class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
+            >
+              <p class="text-sm font-medium text-gray-900">{{ p.structured_formatting.main_text }}</p>
+              <p class="text-xs text-gray-500">{{ p.structured_formatting.secondary_text }}</p>
+            </button>
+          </div>
         </div>
-        <p v-if="scrapeError" class="text-xs text-red-500 mt-1">{{ scrapeError }}</p>
-        <p class="text-xs text-gray-400 mt-1">Paste a Google Maps share URL to auto-populate fields below</p>
+        <p class="text-xs text-gray-400 mt-1">Search for a Google Place to auto-populate fields below</p>
       </div>
 
-      <!-- Scrape preview -->
-      <div v-if="scrapeSuccess" class="mb-5 pb-5 border-b border-gray-200 bg-green-50 -mx-6 px-6 py-4">
-        <p class="text-sm font-medium text-green-800 mb-2">Auto-filled from Google Maps</p>
+      <!-- Place selected preview -->
+      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-gray-200 bg-green-50 -mx-6 px-6 py-4">
+        <p class="text-sm font-medium text-green-800 mb-2">Auto-filled from Google Places</p>
         <div class="text-sm text-green-700 space-y-1">
           <p v-if="form.title"><span class="font-medium">Title:</span> {{ form.title }}</p>
-          <p v-if="form.description"><span class="font-medium">Description:</span> {{ form.description }}</p>
           <p v-if="form.address"><span class="font-medium">Address:</span> {{ form.address }}</p>
+          <p v-if="form.rating"><span class="font-medium">Rating:</span> {{ form.rating }} / 5</p>
           <p v-if="form.image_url"><span class="font-medium">Image:</span> Found</p>
         </div>
       </div>
@@ -149,7 +234,7 @@ onMounted(fetchActivities);
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Google Place ID</label>
-          <input v-model="form.google_place_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <input v-model="form.google_place_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" readonly />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Start</label>

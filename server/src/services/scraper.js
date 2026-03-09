@@ -104,7 +104,7 @@ const PLATFORMS = {
 
   google_maps: {
     name: 'Google Maps',
-    match: (url) => /share\.google\/|google\.[a-z.]+\/maps\//.test(url),
+    match: (url) => /share\.google\/|google\.[a-z.]+\/maps\/|maps\.app\.goo\.gl\//.test(url),
 
     extractFromHtml(html, url) {
       const data = {};
