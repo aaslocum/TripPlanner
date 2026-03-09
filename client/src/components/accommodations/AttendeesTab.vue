@@ -233,7 +233,7 @@ onMounted(() => {
 
         <div v-else>
           <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Attendee</h4>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">First Name</label>
               <input v-model="newUser.first_name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Jane" />
@@ -242,7 +242,7 @@ onMounted(() => {
               <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Last Name</label>
               <input v-model="newUser.last_name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Doe" />
             </div>
-            <div class="col-span-2">
+            <div class="md:col-span-2">
               <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
               <input v-model="newUser.email" type="email" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="jane@example.com" />
             </div>

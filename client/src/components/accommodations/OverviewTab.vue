@@ -31,9 +31,9 @@ function formatCost(cost) {
 </script>
 
 <template>
-  <div class="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900">
+  <div class="flex flex-col md:flex-row border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900">
     <!-- Image carousel -->
-    <div class="relative w-80 shrink-0 bg-gray-100 dark:bg-gray-800" style="min-height: 280px">
+    <div class="relative w-full h-48 md:w-80 md:h-auto shrink-0 bg-gray-100 dark:bg-gray-800" style="min-height: 200px">
       <img
         v-if="accommodation.images?.length"
         :src="accommodation.images[imageIndex]?.image_url"
@@ -66,12 +66,12 @@ function formatCost(cost) {
     </div>
 
     <!-- Stay info -->
-    <div class="flex-1 p-6">
+    <div class="flex-1 p-4 md:p-6">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ accommodation.description || 'Accommodation' }}</h3>
 
       <div class="space-y-3">
         <div class="flex gap-2">
-          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-28">Address:</span>
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-400 w-20 md:w-28 shrink-0">Address:</span>
           <span class="text-sm text-gray-900 dark:text-gray-100">{{ accommodation.address || 'N/A' }}</span>
         </div>
         <div class="flex gap-2">

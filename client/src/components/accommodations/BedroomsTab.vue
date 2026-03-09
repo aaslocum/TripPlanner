@@ -129,7 +129,7 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
 </script>
 
 <template>
-  <div class="max-w-[900px]">
+  <div class="max-w-full md:max-w-[900px]">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bedrooms</h3>
       <button v-if="authStore.isAdmin" @click="showForm = !showForm" class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">
@@ -151,10 +151,10 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
       <div
         v-for="bedroom in accommodation.bedrooms"
         :key="bedroom.bedroom_id"
-        class="flex border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900"
+        class="flex flex-col md:flex-row border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900"
       >
         <!-- Image carousel -->
-        <div class="relative w-60 h-48 shrink-0 bg-gray-100 dark:bg-gray-800">
+        <div class="relative w-full h-48 md:w-60 shrink-0 bg-gray-100 dark:bg-gray-800">
           <img
             v-if="bedroom.images?.length"
             :src="bedroom.images[currentIndex(bedroom)]?.image_url"
@@ -183,7 +183,7 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
         </div>
 
         <!-- Content -->
-        <div class="flex-1 p-5 flex flex-col">
+        <div class="flex-1 p-4 md:p-5 flex flex-col">
           <div class="flex items-start justify-between">
             <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ bedroom.name }}</h4>
             <div class="flex items-center gap-2">

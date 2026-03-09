@@ -114,6 +114,6 @@ onMounted(loadMap);
       </div>
     </div>
 
-    <div ref="mapContainer" class="w-full h-[600px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"></div>
+    <div ref="mapContainer" class="w-full h-[calc(100vh-13rem)] md:h-[600px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"></div>
   </div>
 </template>

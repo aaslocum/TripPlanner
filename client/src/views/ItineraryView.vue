@@ -54,7 +54,7 @@ onMounted(fetchItinerary);
           {{ formatDay(date) }}
         </h3>
 
-        <div class="relative ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-6 space-y-4">
+        <div class="relative ml-2 md:ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4 md:pl-6 space-y-4">
           <div v-for="(event, idx) in events" :key="idx" class="relative">
             <!-- Timeline dot -->
             <div class="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-white dark:border-gray-950" :class="eventColor(event.type)"></div>
