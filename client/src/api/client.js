@@ -19,8 +19,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      // Don't redirect for auth-checking endpoints — they handle 401 gracefully
+      if (!url.includes('/auth/me') && !url.includes('/auth/dev-login')) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
