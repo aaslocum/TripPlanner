@@ -34,11 +34,8 @@ export function configurePassport() {
           [googleId, avatarUrl, user.user_id]);
         user = get(db, 'SELECT * FROM users WHERE user_id = ?', [user.user_id]);
       } else {
-        // Create new user
-        const result = run(db,
-          'INSERT INTO users (first_name, last_name, email, google_id, avatar_url, role) VALUES (?, ?, ?, ?, ?, ?)',
-          [firstName, lastName, email, googleId, avatarUrl, 'user']);
-        user = get(db, 'SELECT * FROM users WHERE user_id = ?', [result.lastInsertRowid]);
+        // Reject — only existing users can log in
+        return done(null, false, { message: 'not_registered' });
       }
 
       done(null, user);

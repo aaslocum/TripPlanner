@@ -184,6 +184,7 @@ async function saveActivity() {
 }
 
 async function deleteActivity(id) {
+  if (!confirm('Are you sure you want to delete this activity?')) return;
   await apiClient.delete(`/activities/${id}`);
   await fetchActivities();
 }

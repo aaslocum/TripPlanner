@@ -31,18 +31,21 @@ router.get('/google', passport.authenticate('google', {
 }));
 
 // Google OAuth - callback
-router.get('/google/callback', passport.authenticate('google', {
-  session: false,
-  failureRedirect: `${config.clientUrl}/login?error=auth_failed`,
-}), (req, res) => {
-  const user = req.user;
-  const token = jwt.sign(
-    { sub: user.user_id, email: user.email, role: user.role },
-    config.jwtSecret,
-    { expiresIn: '24h' }
-  );
-  saveDb();
-  res.redirect(`${config.clientUrl}/auth/callback?token=${token}`);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) return next(err);
+    if (!user) {
+      const reason = info?.message || 'auth_failed';
+      return res.redirect(`${config.clientUrl}/login?error=${reason}`);
+    }
+    const token = jwt.sign(
+      { sub: user.user_id, email: user.email, role: user.role },
+      config.jwtSecret,
+      { expiresIn: '24h' }
+    );
+    saveDb();
+    res.redirect(`${config.clientUrl}/auth/callback?token=${token}`);
+  })(req, res, next);
 });
 
 export default router;

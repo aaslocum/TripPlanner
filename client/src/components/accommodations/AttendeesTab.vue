@@ -40,6 +40,7 @@ async function addMember() {
 }
 
 async function removeMember(userId) {
+  if (!confirm('Are you sure you want to remove this member from the trip?')) return;
   await apiClient.delete(`/trips/${tripStore.selectedTripId}/members/${userId}`);
   await fetchMembers();
 }

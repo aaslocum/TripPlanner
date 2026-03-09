@@ -1,11 +1,13 @@
 <script setup>
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import apiClient from '../api/client';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
+const error = ref(route.query.error || '');
 
 onMounted(async () => {
   // In dev bypass mode, auto-login
@@ -47,6 +49,12 @@ function loginWithGoogle() {
         </svg>
         Sign in with Google
       </button>
+      <p v-if="error === 'not_registered'" class="text-red-500 dark:text-red-400 text-sm mt-4">
+        Your account is not registered. Contact the trip admin for access.
+      </p>
+      <p v-else-if="error" class="text-red-500 dark:text-red-400 text-sm mt-4">
+        Sign in failed. Please try again.
+      </p>
     </div>
   </div>
 </template>

@@ -91,6 +91,7 @@ async function addBed(bedroomId, bedType) {
 }
 
 async function deleteBedroom(id) {
+  if (!confirm('Are you sure you want to remove this bedroom?')) return;
   await apiClient.delete(`/bedrooms/${id}`);
   emit('refresh');
 }
@@ -121,6 +122,7 @@ async function confirmClaim(claimId) {
 }
 
 async function removeClaim(claimId) {
+  if (!confirm('Are you sure you want to remove this room claim?')) return;
   await apiClient.delete(`/bedroom-claims/${claimId}`);
   emit('refresh');
 }

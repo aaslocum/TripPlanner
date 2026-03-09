@@ -271,6 +271,7 @@ async function saveAccommodation() {
 }
 
 async function deleteAccommodation(id) {
+  if (!confirm('Are you sure you want to delete this accommodation? All bedrooms, images, and claims will also be removed.')) return;
   await apiClient.delete(`/accommodations/${id}`);
   if (selectedAccommodation.value?.accommodation_id === id) {
     selectedAccommodation.value = null;

@@ -25,6 +25,7 @@ async function addUser() {
 }
 
 async function deleteUser(id) {
+  if (!confirm('Are you sure you want to remove this user? This cannot be undone.')) return;
   await apiClient.delete(`/users/${id}`);
   await fetchUsers();
 }
