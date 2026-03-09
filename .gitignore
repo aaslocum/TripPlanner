@@ -2,6 +2,7 @@ node_modules/
 client/package-lock.json
 dist/
 *.db
+!server/data/tripplanner.db
 .env
 .env.local
 .DS_Store
