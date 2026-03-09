@@ -447,19 +447,19 @@ watch(() => agentStore.pendingAction, async (action) => {
     <!-- Tabs -->
     <div v-if="selectedAccommodation" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
       <div class="border-b border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between px-2 md:px-4 pt-2">
-          <nav class="flex gap-0 overflow-x-auto">
+        <div class="flex items-center justify-between px-2 md:px-4 pt-2 overflow-hidden">
+          <nav class="flex gap-0 overflow-x-auto min-w-0 -mb-px scrollbar-hide">
             <button
               v-for="tab in tabs"
               :key="tab.id"
               @click="activeTab = tab.id"
-              class="px-3 md:px-6 py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+              class="px-2.5 md:px-6 py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0"
               :class="activeTab === tab.id ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
             >
               {{ tab.label }}
             </button>
           </nav>
-          <div v-if="authStore.isAdmin" class="flex gap-2 pb-1 shrink-0 ml-2">
+          <div v-if="authStore.isAdmin" class="hidden md:flex gap-2 pb-1 shrink-0 ml-2">
             <button @click="openEditForm(selectedAccommodation)" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950">
               Edit
             </button>
