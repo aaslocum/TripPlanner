@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue';
+import { Loader } from '@googlemaps/js-api-loader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
 import apiClient from '../api/client';
@@ -28,6 +29,81 @@ const scrapedBedrooms = ref([]);
 const scrapedImages = ref([]);
 const scrapeSuccess = ref(false);
 
+// Google Places search for address
+const addressQuery = ref('');
+const addressPredictions = ref([]);
+const addressSearching = ref(false);
+const showAddressDropdown = ref(false);
+
+let autocompleteService = null;
+let placesService = null;
+let sessionToken = null;
+let addressDebounceTimer = null;
+
+const loader = new Loader({
+  apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  version: 'weekly',
+  libraries: ['places'],
+});
+
+async function initPlaces() {
+  await loader.importLibrary('places');
+  autocompleteService = new google.maps.places.AutocompleteService();
+  const div = document.createElement('div');
+  placesService = new google.maps.places.PlacesService(div);
+  sessionToken = new google.maps.places.AutocompleteSessionToken();
+}
+
+function onAddressInput() {
+  clearTimeout(addressDebounceTimer);
+
+  if (!addressQuery.value.trim()) {
+    addressPredictions.value = [];
+    showAddressDropdown.value = false;
+    return;
+  }
+
+  addressDebounceTimer = setTimeout(async () => {
+    if (!autocompleteService) await initPlaces();
+    addressSearching.value = true;
+    autocompleteService.getPlacePredictions(
+      { input: addressQuery.value, sessionToken },
+      (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+          addressPredictions.value = results;
+          showAddressDropdown.value = true;
+        } else {
+          addressPredictions.value = [];
+          showAddressDropdown.value = false;
+        }
+        addressSearching.value = false;
+      }
+    );
+  }, 300);
+}
+
+function selectAddressPrediction(prediction) {
+  addressPredictions.value = [];
+  showAddressDropdown.value = false;
+  addressSearching.value = true;
+
+  placesService.getDetails(
+    {
+      placeId: prediction.place_id,
+      fields: ['formatted_address'],
+      sessionToken,
+    },
+    (place, status) => {
+      addressSearching.value = false;
+      if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+        form.value.address = place.formatted_address || prediction.description;
+        addressQuery.value = '';
+      }
+      sessionToken = new google.maps.places.AutocompleteSessionToken();
+    }
+  );
+}
+
 function resetForm() {
   form.value = { description: '', address: '', airbnb_id: '', airbnb_url: '', check_in_datetime: '', check_out_datetime: '', total_cost: '' };
   airbnbUrl.value = '';
@@ -36,6 +112,9 @@ function resetForm() {
   scrapedBedrooms.value = [];
   scrapedImages.value = [];
   editingId.value = null;
+  addressQuery.value = '';
+  addressPredictions.value = [];
+  showAddressDropdown.value = false;
 }
 
 function openAddForm() {
@@ -59,6 +138,9 @@ function openEditForm(acc) {
   scrapeSuccess.value = false;
   scrapedBedrooms.value = [];
   scrapedImages.value = [];
+  addressQuery.value = '';
+  addressPredictions.value = [];
+  showAddressDropdown.value = false;
   showForm.value = true;
 }
 
@@ -276,7 +358,39 @@ onMounted(fetchAccommodations);
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <input v-model="form.address" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="123 Main St..." />
+          <div class="relative">
+            <input v-model="form.address" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="123 Main St..." />
+            <!-- Google Places address search -->
+            <div class="mt-2 relative">
+              <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  v-model="addressQuery"
+                  @input="onAddressInput"
+                  @focus="showAddressDropdown = addressPredictions.length > 0"
+                  class="w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm bg-gray-50"
+                  placeholder="Search for an address..."
+                />
+                <svg v-if="addressSearching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+              </div>
+              <div v-if="showAddressDropdown && addressPredictions.length > 0" class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <button
+                  v-for="p in addressPredictions"
+                  :key="p.place_id"
+                  @click="selectAddressPrediction(p)"
+                  class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-gray-100 last:border-b-0"
+                >
+                  <p class="text-sm font-medium text-gray-900">{{ p.structured_formatting.main_text }}</p>
+                  <p class="text-xs text-gray-500">{{ p.structured_formatting.secondary_text }}</p>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Airbnb ID</label>

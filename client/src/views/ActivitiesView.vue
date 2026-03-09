@@ -10,7 +10,9 @@ const tripStore = useTripStore();
 const activities = ref([]);
 const loading = ref(false);
 const showForm = ref(false);
-const form = ref({ title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' });
+const editingId = ref(null);
+const emptyForm = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
+const form = ref({ ...emptyForm });
 
 // Google Places search
 const searchQuery = ref('');
@@ -105,7 +107,6 @@ function selectPrediction(prediction) {
         }
 
         placeSelected.value = true;
-        // New session token for next search
         sessionToken = new google.maps.places.AutocompleteSessionToken();
       }
     }
@@ -113,11 +114,44 @@ function selectPrediction(prediction) {
 }
 
 function resetForm() {
-  form.value = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', end_datetime: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
+  form.value = { ...emptyForm };
+  editingId.value = null;
   searchQuery.value = '';
   predictions.value = [];
   placeSelected.value = false;
   showDropdown.value = false;
+}
+
+function openAddForm() {
+  resetForm();
+  showForm.value = true;
+}
+
+function openEditForm(activity) {
+  editingId.value = activity.activity_id;
+  form.value = {
+    title: activity.title || '',
+    description: activity.description || '',
+    image_url: activity.image_url || '',
+    google_place_id: activity.google_place_id || '',
+    start_datetime: activity.start_datetime || '',
+    end_datetime: activity.end_datetime || '',
+    estimated_cost: activity.estimated_cost || '',
+    address: activity.address || '',
+    latitude: activity.latitude || null,
+    longitude: activity.longitude || null,
+    rating: activity.rating || null,
+    source_url: activity.source_url || '',
+  };
+  searchQuery.value = '';
+  placeSelected.value = false;
+  showDropdown.value = false;
+  showForm.value = true;
+}
+
+function cancelForm() {
+  showForm.value = false;
+  resetForm();
 }
 
 async function fetchActivities() {
@@ -137,7 +171,13 @@ async function saveActivity() {
     trip_id: tripStore.selectedTripId,
     estimated_cost: form.value.estimated_cost ? Number(form.value.estimated_cost) : null,
   };
-  await apiClient.post('/activities', payload);
+
+  if (editingId.value) {
+    await apiClient.put(`/activities/${editingId.value}`, payload);
+  } else {
+    await apiClient.post('/activities', payload);
+  }
+
   showForm.value = false;
   resetForm();
   await fetchActivities();
@@ -161,13 +201,20 @@ onMounted(fetchActivities);
   <div>
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Activities</h2>
-      <button v-if="authStore.isAdmin" @click="showForm = !showForm; if (!showForm) resetForm()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
-        {{ showForm ? 'Cancel' : '+ Add Activity' }}
-      </button>
+      <template v-if="authStore.isAdmin">
+        <button v-if="!showForm" @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+          + Add Activity
+        </button>
+        <button v-else @click="cancelForm" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+          Cancel
+        </button>
+      </template>
     </div>
 
-    <!-- Add form -->
+    <!-- Add/Edit form -->
     <div v-if="showForm" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
+
       <!-- Google Places search -->
       <div class="mb-5 pb-5 border-b border-gray-200">
         <label class="block text-sm font-medium text-gray-700 mb-1">Search Google Places</label>
@@ -221,7 +268,7 @@ onMounted(fetchActivities);
           <input v-model="form.title" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Hiking at..." />
         </div>
         <div class="col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-gray-400 font-normal">(optional)</span></label>
           <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Details about the activity..."></textarea>
         </div>
         <div class="col-span-2">
@@ -249,7 +296,9 @@ onMounted(fetchActivities);
           <input v-model="form.estimated_cost" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
         </div>
       </div>
-      <button @click="saveActivity" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save</button>
+      <button @click="saveActivity" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+        {{ editingId ? 'Update' : 'Save' }}
+      </button>
     </div>
 
     <!-- Activity panels -->
@@ -274,11 +323,18 @@ onMounted(fetchActivities);
                 <span v-if="activity.end_datetime"> - {{ formatDate(activity.end_datetime) }}</span>
               </p>
             </div>
-            <button v-if="authStore.isAdmin" @click="deleteActivity(activity.activity_id)" class="text-gray-400 hover:text-red-500 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+            <div v-if="authStore.isAdmin" class="flex gap-1">
+              <button @click="openEditForm(activity)" class="text-gray-400 hover:text-indigo-600 transition-colors p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button @click="deleteActivity(activity.activity_id)" class="text-gray-400 hover:text-red-500 transition-colors p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
           </div>
           <p v-if="activity.description" class="text-sm text-gray-600 mt-3">{{ activity.description }}</p>
           <div class="flex items-center gap-3 mt-3">
