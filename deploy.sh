@@ -16,6 +16,10 @@ if [ -f "$DB_FILE" ]; then
   echo "Database backed up."
 fi
 
+# Remove DB from git tracking so pull doesn't conflict
+# (needed for the transition from tracked → gitignored)
+git rm --cached "$DB_FILE" 2>/dev/null || true
+
 echo "Pulling latest code..."
 git pull
 
