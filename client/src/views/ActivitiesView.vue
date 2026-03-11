@@ -400,10 +400,10 @@ watch(() => agentStore.pendingAction, (action) => {
       </h3>
       <div class="space-y-3">
       <div v-for="activity in dayActivities" :key="activity.activity_id" class="bg-surface dark:bg-dark-surface rounded-lg shadow-sm border border-warm-200 dark:border-dark-border overflow-hidden flex flex-col md:flex-row">
-        <div v-if="activity.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
+        <div v-if="activity.image_url" class="w-full h-36 md:w-44 md:h-36 flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
-        <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-cat-activities-light to-purple-50 dark:from-cat-activities/20 dark:to-dark-raised flex items-center justify-center">
+        <div v-else class="w-full h-24 md:w-44 md:h-36 flex-shrink-0 bg-gradient-to-br from-cat-activities-light to-purple-50 dark:from-cat-activities/20 dark:to-dark-raised flex items-center justify-center">
           <svg class="w-8 h-8 text-cat-activities/40 dark:text-cat-activities/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />

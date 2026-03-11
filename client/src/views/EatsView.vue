@@ -422,10 +422,10 @@ watch(() => agentStore.pendingAction, async (action) => {
       </h3>
       <div class="space-y-3">
         <div v-for="eat in dayEats" :key="eat.eat_id" class="bg-surface dark:bg-dark-surface rounded-lg shadow-sm border border-warm-200 dark:border-dark-border overflow-hidden flex flex-col md:flex-row">
-          <div v-if="eat.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
+          <div v-if="eat.image_url" class="w-full h-36 md:w-44 md:h-36 flex-shrink-0">
             <img :src="eat.image_url" class="w-full h-full object-cover" />
           </div>
-          <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-cat-eats-light to-red-50 dark:from-red-950 dark:to-red-900 flex items-center justify-center">
+          <div v-else class="w-full h-24 md:w-44 md:h-36 flex-shrink-0 bg-gradient-to-br from-cat-eats-light to-red-50 dark:from-red-950 dark:to-red-900 flex items-center justify-center">
             <svg class="w-8 h-8 text-cat-eats/40 dark:text-cat-eats/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
             </svg>
