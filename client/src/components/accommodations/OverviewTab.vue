@@ -4,6 +4,7 @@ import { ref } from 'vue';
 const props = defineProps({
   accommodation: { type: Object, required: true },
   memberCount: { type: Number, default: 1 },
+  isAdmin: { type: Boolean, default: false },
 });
 
 const imageIndex = ref(0);
@@ -83,17 +84,19 @@ function formatCost(cost) {
           <span class="text-sm font-medium text-warm-500 dark:text-warm-400 w-28">Check-out:</span>
           <span class="text-sm text-flag-black dark:text-warm-100">{{ formatDate(accommodation.check_out_datetime) }}</span>
         </div>
-        <div class="flex gap-2">
-          <span class="text-sm font-medium text-warm-500 dark:text-warm-400 w-28">Total Cost:</span>
-          <span class="text-sm font-semibold text-flag-black dark:text-warm-100">{{ formatCost(accommodation.total_cost) }}</span>
-        </div>
-        <div v-if="accommodation.total_cost && memberCount > 1" class="flex gap-2">
-          <span class="text-sm font-medium text-warm-500 dark:text-warm-400 w-28">Per Person:</span>
-          <span class="text-sm font-semibold text-trip-accent dark:text-trip-accent">
-            {{ formatCost(accommodation.total_cost / memberCount) }}
-            <span class="text-xs font-normal text-warm-400">({{ memberCount }} people)</span>
-          </span>
-        </div>
+        <template v-if="isAdmin">
+          <div class="flex gap-2">
+            <span class="text-sm font-medium text-warm-500 dark:text-warm-400 w-28">Total Cost:</span>
+            <span class="text-sm font-semibold text-flag-black dark:text-warm-100">{{ formatCost(accommodation.total_cost) }}</span>
+          </div>
+          <div v-if="accommodation.total_cost && memberCount > 1" class="flex gap-2">
+            <span class="text-sm font-medium text-warm-500 dark:text-warm-400 w-28">Per Person:</span>
+            <span class="text-sm font-semibold text-trip-accent dark:text-trip-accent">
+              {{ formatCost(accommodation.total_cost / memberCount) }}
+              <span class="text-xs font-normal text-warm-400">({{ memberCount }} people)</span>
+            </span>
+          </div>
+        </template>
       </div>
 
       <!-- Airbnb link -->

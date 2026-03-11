@@ -471,7 +471,7 @@ watch(() => agentStore.pendingAction, async (action) => {
       </div>
 
       <div class="p-3 md:p-6">
-        <OverviewTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" :member-count="memberCount" />
+        <OverviewTab v-if="activeTab === 'living'" :accommodation="selectedAccommodation" :member-count="memberCount" :is-admin="authStore.isAdmin" />
         <BedroomsTab v-if="activeTab === 'bedrooms'" :accommodation="selectedAccommodation" @refresh="selectAccommodation(selectedAccommodation.accommodation_id)" />
         <AmenitiesTab v-if="activeTab === 'amenities'" :accommodation="selectedAccommodation" />
         <LocationTab v-if="activeTab === 'location'" :accommodation="selectedAccommodation" />

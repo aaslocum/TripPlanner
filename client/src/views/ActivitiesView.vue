@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { mapsLoader as loader } from '../utils/mapsLoader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
@@ -12,6 +12,7 @@ const activities = ref([]);
 const loading = ref(false);
 const showForm = ref(false);
 const editingId = ref(null);
+const activityFormRef = ref(null);
 const emptyForm = { title: '', description: '', image_url: '', google_place_id: '', start_datetime: '', duration: '', estimated_cost: '', address: '', latitude: null, longitude: null, rating: null, source_url: '' };
 const form = ref({ ...emptyForm });
 
@@ -160,6 +161,9 @@ function openEditForm(activity) {
   placeSelected.value = false;
   showDropdown.value = false;
   showForm.value = true;
+  nextTick(() => {
+    activityFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
 function cancelForm() {
@@ -296,9 +300,9 @@ watch(() => agentStore.pendingAction, (action) => {
           + Add Activity
         </button>
       </div>
-      <div v-else class="flex items-center gap-2 flex-wrap justify-end">
+      <div v-else-if="!editingId" class="flex items-center gap-2 flex-wrap justify-end">
         <button @click="saveActivity" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
-          {{ editingId ? 'Update' : 'Save' }}
+          Save
         </button>
         <button @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">
           Cancel
@@ -306,8 +310,9 @@ watch(() => agentStore.pendingAction, (action) => {
       </div>
     </div>
 
-    <!-- Add/Edit form -->
-    <div v-if="showForm" class="bg-surface dark:bg-dark-surface rounded-xl shadow-sm border border-warm-200 dark:border-dark-border p-6 mb-6">
+    <!-- Form: at top for add, teleported inline for edit -->
+    <Teleport :to="editingId ? '#edit-target-' + editingId : 'body'" :disabled="!editingId">
+    <div v-if="showForm" ref="activityFormRef" class="bg-surface dark:bg-dark-surface rounded-xl shadow-sm border border-warm-200 dark:border-dark-border p-6" :class="editingId ? 'mt-3' : 'mb-6'">
       <h3 class="text-lg font-semibold text-flag-black dark:text-warm-100 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
 
       <!-- Google Places search -->
@@ -391,7 +396,13 @@ watch(() => agentStore.pendingAction, (action) => {
           <input v-model="form.estimated_cost" type="number" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" />
         </div>
       </div>
+      <!-- Inline buttons for edit mode -->
+      <div v-if="editingId" class="flex justify-end gap-2 mt-5 pt-4 border-t border-warm-200 dark:border-dark-border">
+        <button @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">Cancel</button>
+        <button @click="saveActivity" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">Update</button>
+      </div>
     </div>
+    </Teleport>
 
     <!-- Activity panels grouped by date -->
     <div v-for="[date, dayActivities] in groupedActivities" :key="date">
@@ -399,7 +410,8 @@ watch(() => agentStore.pendingAction, (action) => {
         {{ date === 'unscheduled' ? 'Unscheduled' : formatDayHeader(date) }}
       </h3>
       <div class="space-y-3">
-      <div v-for="activity in dayActivities" :key="activity.activity_id" class="bg-surface dark:bg-dark-surface rounded-lg shadow-sm border border-warm-200 dark:border-dark-border overflow-hidden flex flex-col md:flex-row">
+      <template v-for="activity in dayActivities" :key="activity.activity_id">
+      <div class="bg-surface dark:bg-dark-surface rounded-lg shadow-sm border border-warm-200 dark:border-dark-border overflow-hidden flex flex-col md:flex-row">
         <div v-if="activity.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
@@ -444,6 +456,8 @@ watch(() => agentStore.pendingAction, (action) => {
           </div>
         </div>
       </div>
+      <div :id="'edit-target-' + activity.activity_id"></div>
+      </template>
       </div>
     </div>
 
