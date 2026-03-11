@@ -136,7 +136,13 @@
       "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\alxsl\\\\TripPlanner\\\\server''; node query-xj.mjs\")",
       "Bash(powershell -Command \"Remove-Item ''C:\\\\Users\\\\alxsl\\\\TripPlanner\\\\server\\\\query-xj.mjs''\")",
       "Bash(git add CLAUDE.md CONSULTANT_REPORT.md client/src/composables/useTripColor.js \"client/src/utils/\" client/src/views/AttendeesView.vue client/src/views/EatsView.vue client/src/views/LogisticsView.vue client/src/views/OverviewView.vue client/src/views/TripsView.vue server/src/db/migrations/019_add_user_encrypted_context.sql server/src/db/migrations/020_add_user_preferences.sql server/src/db/migrations/021_create_trip_transportation.sql server/src/db/migrations/022_create_eats.sql server/src/db/migrations/023_add_trip_member_rsvp_and_dates.sql server/src/db/migrations/024_add_trip_color_description_image.sql server/src/routes/eats.js server/src/routes/transportation.js server/src/services/agentTools.js server/src/services/llmClient.js)",
-      "Bash(git add .claude/launch.json .claude/settings.local.json client/index.html client/package.json client/src/App.vue client/src/assets/main.css client/src/components/ client/src/router/ client/src/stores/ client/src/views/AccommodationsView.vue client/src/views/ActivitiesView.vue client/src/views/AiSettingsView.vue client/src/views/ItineraryView.vue client/src/views/LoginView.vue client/src/views/MapView.vue client/src/views/TravelAgentView.vue client/src/views/UsersView.vue server/data/tripplanner.db server/package.json server/package-lock.json server/src/config/env.js server/src/db/seed.js server/src/index.js server/src/routes/agent.js server/src/routes/auth.js server/src/routes/trips.js server/src/routes/users.js server/src/services/encryption.js)"
+      "Bash(git add .claude/launch.json .claude/settings.local.json client/index.html client/package.json client/src/App.vue client/src/assets/main.css client/src/components/ client/src/router/ client/src/stores/ client/src/views/AccommodationsView.vue client/src/views/ActivitiesView.vue client/src/views/AiSettingsView.vue client/src/views/ItineraryView.vue client/src/views/LoginView.vue client/src/views/MapView.vue client/src/views/TravelAgentView.vue client/src/views/UsersView.vue server/data/tripplanner.db server/package.json server/package-lock.json server/src/config/env.js server/src/db/seed.js server/src/index.js server/src/routes/agent.js server/src/routes/auth.js server/src/routes/trips.js server/src/routes/users.js server/src/services/encryption.js)",
+      "Bash(git push -u origin master)",
+      "Bash(C:UsersalxslTripPlanner.gitignore:*)",
+      "Bash(git rm --cached server/data/tripplanner.db)",
+      "Bash(powershell -Command \"Set-Content -Path ''C:\\\\Users\\\\alxsl\\\\TripPlanner\\\\.gitignore'' -Encoding UTF8 -Value @'':*)",
+      "Bash(cross-env AUTH_BYPASS=true node src/index.js)",
+      "Bash(AUTH_BYPASS=true node src/index.js)"
     ]
   }
 }

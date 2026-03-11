@@ -42,10 +42,13 @@ const myEntry = computed(() =>
   rows.value.find(r => r.user_id === authStore.activeUser?.user_id)
 );
 
+// Only confirmed attendees are relevant for logistics
+const confirmedMembers = computed(() => members.value.filter(m => m.rsvp_status === 'yes'));
+
 // Members who don't yet have a transport entry (for the Add form user dropdown — admin only)
 const membersWithoutTransport = computed(() => {
   const assignedIds = new Set(rows.value.map(r => r.user_id));
-  return members.value.filter(m => !assignedIds.has(m.user_id));
+  return confirmedMembers.value.filter(m => !assignedIds.has(m.user_id));
 });
 
 // Can the current user add an entry? Admin: anyone unassigned. User: only if they don't have one yet
