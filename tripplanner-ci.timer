@@ -1,0 +1,16 @@
+[Unit]
+Description=Poll TripPlanner repo for changes every 2 minutes
+
+[Timer]
+# First run 30 seconds after boot
+OnBootSec=30
+# Then every 2 minutes
+OnUnitActiveSec=2min
+# Add a random delay up to 10 seconds to avoid thundering herd
+RandomizedDelaySec=10
+# Keep the timer running even if the service hasn't finished
+# (the lock file in ci-poll.sh prevents overlap)
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

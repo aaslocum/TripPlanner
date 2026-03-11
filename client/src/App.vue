@@ -26,7 +26,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
       <AppHeader @toggle-menu="drawerOpen = !drawerOpen" />
       <div class="flex">
         <AppSidebar :drawer-open="drawerOpen" @close-drawer="drawerOpen = false" />
-        <main class="flex-1 p-4 md:p-6 md:ml-56 mt-14 md:mt-16 pb-20 md:pb-6">
+        <main class="flex-1 min-w-0 p-4 md:p-6 md:ml-56 mt-14 md:mt-16 pb-20 md:pb-6 overflow-x-hidden">
           <router-view />
         </main>
       </div>

@@ -230,31 +230,32 @@ function eventCount(dateStr) {
 }
 
 function borderColor(type) {
-  return type === 'check_in' ? 'border-l-green-500'
-       : type === 'check_out' ? 'border-l-red-500'
-       : type === 'eat' ? 'border-l-orange-500'
-       : 'border-l-trip-accent';
+  return type === 'check_in' ? 'border-l-cat-stays'
+       : type === 'check_out' ? 'border-l-cat-eats'
+       : type === 'eat' ? 'border-l-cat-eats'
+       : 'border-l-cat-activities';
 }
 
 function bgColor(type) {
-  return type === 'check_in' ? 'bg-green-50 dark:bg-green-950/50'
-       : type === 'check_out' ? 'bg-red-50 dark:bg-red-950/50'
-       : type === 'eat' ? 'bg-orange-50 dark:bg-orange-950/50'
-       : 'bg-surface dark:bg-dark-surface';
+  return type === 'check_in' ? 'bg-cat-stays-light dark:bg-cat-stays/10'
+       : type === 'check_out' ? 'bg-cat-eats-light dark:bg-cat-eats/10'
+       : type === 'eat' ? 'bg-cat-eats-light dark:bg-cat-eats/10'
+       : 'bg-cat-activities-light dark:bg-cat-activities/10';
 }
 
 function typeLabel(type) {
   return type === 'check_in' ? 'Check-in'
        : type === 'check_out' ? 'Check-out'
        : type === 'eat' ? 'Dining'
+       : type === 'activity' ? 'Activity'
        : '';
 }
 
 function typeLabelColor(type) {
-  return type === 'check_in' ? 'text-green-600 dark:text-green-400'
-       : type === 'check_out' ? 'text-red-600 dark:text-red-400'
-       : type === 'eat' ? 'text-orange-600 dark:text-orange-400'
-       : '';
+  return type === 'check_in' ? 'text-cat-stays'
+       : type === 'check_out' ? 'text-cat-eats'
+       : type === 'eat' ? 'text-cat-eats'
+       : 'text-cat-activities';
 }
 
 watch(() => tripStore.selectedTripId, fetchItinerary);
@@ -266,22 +267,22 @@ onMounted(fetchItinerary);
     <h2 class="text-2xl font-display font-black uppercase tracking-wide text-flag-black dark:text-warm-100 mb-5">Itinerary</h2>
 
     <!-- ===== Day Tabs ===== -->
-    <div class="flex items-end gap-3 overflow-x-auto scrollbar-hide border-b border-warm-200 dark:border-dark-border mb-6">
+    <div class="flex items-end gap-1 sm:gap-3 overflow-x-auto scrollbar-hide border-b border-warm-200 dark:border-dark-border mb-6">
       <button
         v-for="date in allDates"
         :key="date"
         @click="selectedDate = date"
-        class="relative flex flex-col items-center px-5 py-2.5 shrink-0 transition-colors border-b-2 -mb-px"
+        class="relative flex flex-col items-center px-2.5 sm:px-5 py-2 sm:py-2.5 min-w-0 transition-colors border-b-2 -mb-px"
         :class="selectedDate === date
           ? 'border-trip-accent text-trip-accent dark:text-trip-accent'
           : 'border-transparent text-warm-400 dark:text-warm-500 hover:text-warm-700 dark:hover:text-warm-400'"
       >
-        <span class="text-[10px] uppercase tracking-widest font-semibold"
+        <span class="text-[10px] uppercase tracking-wider sm:tracking-widest font-semibold"
               :class="selectedDate === date ? 'text-trip-accent dark:text-trip-accent' : ''">
           {{ formatTabDay(date) }}
         </span>
         <span class="text-sm font-semibold mt-0.5">{{ formatTabDate(date) }}</span>
-        <span v-if="attendanceForDate(date)" class="text-[9px] text-warm-400 dark:text-warm-500 mt-0.5">
+        <span v-if="attendanceForDate(date)" class="hidden sm:inline text-[9px] text-warm-400 dark:text-warm-500 mt-0.5">
           {{ attendanceForDate(date) }} attending
         </span>
         <!-- event count dot -->
@@ -298,7 +299,7 @@ onMounted(fetchItinerary);
       <button
         v-if="hasUnscheduled"
         @click="selectedDate = 'Unscheduled'"
-        class="flex items-center gap-1.5 px-5 py-2.5 shrink-0 text-sm font-medium border-b-2 -mb-px transition-colors"
+        class="flex items-center gap-1.5 px-2.5 sm:px-5 py-2 sm:py-2.5 shrink-0 text-sm font-medium border-b-2 -mb-px transition-colors"
         :class="selectedDate === 'Unscheduled'
           ? 'border-amber-500 text-amber-700 dark:text-amber-400'
           : 'border-transparent text-warm-400 dark:text-warm-500 hover:text-warm-700 dark:hover:text-warm-400'"
@@ -408,7 +409,7 @@ onMounted(fetchItinerary);
         >
           <div class="flex items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wider"
-                  :class="typeLabelColor(event.type) || 'text-trip-accent dark:text-trip-accent'">
+                  :class="typeLabelColor(event.type) || 'text-cat-activities'">
               {{ typeLabel(event.type) || 'Activity' }}
             </span>
             <span v-if="event.details?.is_suggested"

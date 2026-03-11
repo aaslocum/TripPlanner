@@ -13,7 +13,10 @@
     "db:reset": "cd server && node src/db/migrations/runner.js --reset && node src/db/seed.js",
     "build": "cd client && npm run build",
     "start": "cd server && cross-env AUTH_BYPASS=true node src/index.js",
-    "start:prod": "cd server && node src/index.js"
+    "start:prod": "cd server && node src/index.js",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
