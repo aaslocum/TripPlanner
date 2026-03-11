@@ -17,6 +17,11 @@ const showModal = ref(false);
 const customContext = ref('');
 const contextTextarea = ref(null);
 
+// Edit mode state
+const editMode = ref(false);
+const editDraft = ref(null);
+const saving = ref(false);
+
 const trip = computed(() => tripStore.selectedTrip);
 
 // Parse the description JSON; returns null if missing or invalid
@@ -96,8 +101,33 @@ async function confirmGenerate() {
   }
 }
 
+function startEdit() {
+  editDraft.value = JSON.parse(JSON.stringify(overviewData.value));
+  editMode.value = true;
+}
+
+function cancelEdit() {
+  editMode.value = false;
+  editDraft.value = null;
+}
+
+async function saveEdit() {
+  saving.value = true;
+  try {
+    await tripStore.updateTrip(tripStore.selectedTripId, {
+      description: JSON.stringify(editDraft.value),
+    });
+    editMode.value = false;
+    editDraft.value = null;
+  } catch (err) {
+    alert('Failed to save: ' + (err.response?.data?.error?.message || err.message));
+  } finally {
+    saving.value = false;
+  }
+}
+
 onMounted(fetchStats);
-watch(() => tripStore.selectedTripId, fetchStats);
+watch(() => tripStore.selectedTripId, () => { cancelEdit(); fetchStats(); });
 </script>
 
 <template>
@@ -125,14 +155,19 @@ watch(() => tripStore.selectedTripId, fetchStats);
 
       <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-10 md:pt-16 pb-12 md:pb-16">
         <!-- Badges (from AI) -->
-        <div v-if="overviewData?.badges?.length" class="flex flex-wrap gap-2 mb-6">
+        <div v-if="(editMode ? editDraft : overviewData)?.badges?.length" class="flex flex-wrap gap-2 mb-6">
           <span
-            v-for="badge in overviewData.badges"
-            :key="badge.label"
+            v-for="(badge, i) in (editMode ? editDraft : overviewData).badges"
+            :key="i"
             class="inline-flex items-center gap-1.5 bg-white/10 text-white/90 text-xs font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-full"
           >
             <span class="w-2 h-2 rounded-full" :class="badgeDotClass(badge.color)"></span>
-            {{ badge.label }}
+            <input
+              v-if="editMode"
+              v-model="editDraft.badges[i].label"
+              class="bg-transparent border-b border-white/30 focus:border-white/70 outline-none w-24 text-xs font-display font-bold uppercase tracking-wider text-white/90"
+            />
+            <template v-else>{{ badge.label }}</template>
           </span>
         </div>
 
@@ -147,7 +182,13 @@ watch(() => tripStore.selectedTripId, fetchStats);
         </p>
 
         <!-- Hook paragraph (from AI) -->
-        <p v-if="overviewData?.hook" class="text-white/70 text-lg md:text-xl leading-relaxed max-w-2xl mb-10">
+        <textarea
+          v-if="editMode && editDraft?.hook != null"
+          v-model="editDraft.hook"
+          rows="3"
+          class="w-full max-w-2xl mb-10 bg-white/10 border border-white/20 focus:border-white/50 rounded-lg px-3 py-2 text-white/90 text-lg md:text-xl leading-relaxed outline-none resize-none"
+        ></textarea>
+        <p v-else-if="overviewData?.hook" class="text-white/70 text-lg md:text-xl leading-relaxed max-w-2xl mb-10">
           {{ overviewData.hook }}
         </p>
 
@@ -201,7 +242,7 @@ watch(() => tripStore.selectedTripId, fetchStats);
     </section>
 
     <!-- ═══ CARDS SECTION (light) ════════════════════════════════ -->
-    <section v-if="overviewData?.cards?.length" class="-mx-4 md:-mx-6 bg-surface-page dark:bg-dark-bg">
+    <section v-if="(editMode ? editDraft : overviewData)?.cards?.length" class="-mx-4 md:-mx-6 bg-surface-page dark:bg-dark-bg">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-20">
         <div class="text-center mb-10 md:mb-14">
           <span class="text-xs font-display font-bold uppercase tracking-[0.2em] text-trip-accent mb-3 block">What's On Deck</span>
@@ -212,13 +253,26 @@ watch(() => tripStore.selectedTripId, fetchStats);
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           <div
-            v-for="card in overviewData.cards"
+            v-for="(card, i) in (editMode ? editDraft : overviewData).cards"
             :key="card.step"
             class="bg-surface dark:bg-dark-surface rounded-2xl p-6 md:p-8 border border-warm-200 dark:border-dark-border"
           >
             <span class="text-xs font-display font-bold uppercase tracking-wider text-warm-400 dark:text-warm-500 block mb-3">{{ card.step }}</span>
-            <h3 class="font-display font-bold text-lg uppercase tracking-wide text-flag-black dark:text-warm-100 mb-3">{{ card.title }}</h3>
-            <p class="text-warm-500 dark:text-warm-400 text-sm leading-relaxed">{{ card.body }}</p>
+            <template v-if="editMode">
+              <input
+                v-model="editDraft.cards[i].title"
+                class="w-full font-display font-bold text-lg uppercase tracking-wide text-flag-black dark:text-warm-100 bg-transparent border-b border-warm-300 dark:border-dark-border focus:border-trip-accent outline-none mb-3"
+              />
+              <textarea
+                v-model="editDraft.cards[i].body"
+                rows="3"
+                class="w-full text-warm-500 dark:text-warm-400 text-sm leading-relaxed bg-warm-50 dark:bg-dark-raised border border-warm-200 dark:border-dark-border rounded-lg px-2 py-1.5 outline-none focus:border-trip-accent resize-none"
+              ></textarea>
+            </template>
+            <template v-else>
+              <h3 class="font-display font-bold text-lg uppercase tracking-wide text-flag-black dark:text-warm-100 mb-3">{{ card.title }}</h3>
+              <p class="text-warm-500 dark:text-warm-400 text-sm leading-relaxed">{{ card.body }}</p>
+            </template>
           </div>
         </div>
       </div>
@@ -226,15 +280,32 @@ watch(() => tripStore.selectedTripId, fetchStats);
 
     <!-- ═══ HIGHLIGHTS (light, border-t) ════════════════════════ -->
     <section
-      v-if="overviewData?.highlights?.length"
+      v-if="(editMode ? editDraft : overviewData)?.highlights?.length"
       class="-mx-4 md:-mx-6 bg-surface-page dark:bg-dark-bg border-t border-warm-200 dark:border-dark-border"
     >
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-14 md:py-20">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-          <div v-for="h in overviewData.highlights" :key="h.title" class="text-center">
-            <span class="text-4xl block mb-4">{{ h.emoji }}</span>
-            <h3 class="font-display font-bold text-base uppercase tracking-wide text-flag-black dark:text-warm-100 mb-2">{{ h.title }}</h3>
-            <p class="text-warm-500 dark:text-warm-400 text-sm leading-relaxed">{{ h.body }}</p>
+          <div v-for="(h, i) in (editMode ? editDraft : overviewData).highlights" :key="h.title" class="text-center">
+            <template v-if="editMode">
+              <input
+                v-model="editDraft.highlights[i].emoji"
+                class="text-4xl block mb-4 w-16 text-center mx-auto bg-transparent border-b border-warm-300 dark:border-dark-border focus:border-trip-accent outline-none"
+              />
+              <input
+                v-model="editDraft.highlights[i].title"
+                class="w-full font-display font-bold text-base uppercase tracking-wide text-flag-black dark:text-warm-100 bg-transparent border-b border-warm-300 dark:border-dark-border focus:border-trip-accent outline-none mb-2 text-center"
+              />
+              <textarea
+                v-model="editDraft.highlights[i].body"
+                rows="3"
+                class="w-full text-warm-500 dark:text-warm-400 text-sm leading-relaxed bg-warm-50 dark:bg-dark-raised border border-warm-200 dark:border-dark-border rounded-lg px-2 py-1.5 outline-none focus:border-trip-accent resize-none text-center"
+              ></textarea>
+            </template>
+            <template v-else>
+              <span class="text-4xl block mb-4">{{ h.emoji }}</span>
+              <h3 class="font-display font-bold text-base uppercase tracking-wide text-flag-black dark:text-warm-100 mb-2">{{ h.title }}</h3>
+              <p class="text-warm-500 dark:text-warm-400 text-sm leading-relaxed">{{ h.body }}</p>
+            </template>
           </div>
         </div>
       </div>
@@ -242,25 +313,65 @@ watch(() => tripStore.selectedTripId, fetchStats);
 
     <!-- ═══ CLOSING CTA (dark) ═══════════════════════════════════ -->
     <section
-      v-if="overviewData?.closing"
+      v-if="(editMode ? editDraft : overviewData)?.closing"
       class="-mx-4 md:-mx-6 bg-flag-black border-t border-white/10"
     >
       <div class="max-w-3xl mx-auto px-4 sm:px-6 py-14 md:py-20 text-center">
-        <h2 class="font-display font-black text-3xl md:text-4xl uppercase tracking-wide text-white mb-6">
+        <textarea
+          v-if="editMode"
+          v-model="editDraft.closing"
+          rows="2"
+          class="w-full font-display font-black text-2xl md:text-3xl uppercase tracking-wide text-white mb-6 bg-white/10 border border-white/20 focus:border-white/50 rounded-lg px-3 py-2 outline-none resize-none text-center"
+        ></textarea>
+        <h2 v-else class="font-display font-black text-3xl md:text-4xl uppercase tracking-wide text-white mb-6">
           {{ overviewData.closing }}
         </h2>
-        <button
-          v-if="authStore.isAdmin"
-          @click="openModal"
-          :disabled="generating"
-          class="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm transition-colors disabled:opacity-40"
-        >
-          <svg v-if="generating" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-          </svg>
-          {{ generating ? 'Regenerating...' : '↻ Regenerate Overview' }}
-        </button>
+
+        <!-- Admin controls -->
+        <div v-if="authStore.isAdmin" class="flex items-center justify-center gap-4">
+          <template v-if="editMode">
+            <button
+              @click="cancelEdit"
+              :disabled="saving"
+              class="px-5 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:text-white/80 transition-colors disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              @click="saveEdit"
+              :disabled="saving"
+              class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-display font-bold uppercase tracking-wider bg-trip-accent hover:bg-trip-accent-hover text-white transition-colors disabled:opacity-50"
+            >
+              <svg v-if="saving" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              {{ saving ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </template>
+          <template v-else>
+            <button
+              @click="startEdit"
+              class="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Overview
+            </button>
+            <button
+              @click="openModal"
+              :disabled="generating"
+              class="inline-flex items-center gap-2 text-white/40 hover:text-white/70 text-sm transition-colors disabled:opacity-40"
+            >
+              <svg v-if="generating" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              {{ generating ? 'Regenerating...' : '↻ Regenerate Overview' }}
+            </button>
+          </template>
+        </div>
       </div>
     </section>
 
