@@ -14,47 +14,47 @@ const { isDark, toggle: toggleDark } = useDarkMode();
 
 const navItems = [
   { path: '/overview', label: 'Overview', icon: 'overview' },
-  { path: '/accommodations', label: 'Stays', icon: 'home', catColor: 'green' },
+  { path: '/accommodations', label: 'Stays', icon: 'home', cat: 'stays' },
   { path: '/attendees', label: 'Guests', icon: 'attendees' },
-  { path: '/activities', label: 'Activities', icon: 'calendar', catColor: 'purple' },
-  { path: '/eats', label: 'Eats', icon: 'eats', catColor: 'red' },
+  { path: '/activities', label: 'Activities', icon: 'calendar', cat: 'activities' },
+  { path: '/eats', label: 'Eats', icon: 'eats', cat: 'eats' },
   { path: '/itinerary', label: 'Itinerary', icon: 'list' },
   { path: '/map', label: 'Map', icon: 'map' },
   { path: '/logistics', label: 'Logistics', icon: 'logistics' },
 ];
 
-// Category color classes for active nav items
+// Category color classes for active nav items (use dynamic CSS variables)
 const catActiveClass = {
-  green: 'bg-flag-green-light dark:bg-flag-green/10 text-flag-green',
-  purple: 'bg-flag-purple-light dark:bg-flag-purple/10 text-flag-purple',
-  red: 'bg-flag-red-light dark:bg-flag-red/10 text-flag-red',
+  stays: 'bg-cat-stays-light dark:bg-cat-stays/10 text-cat-stays',
+  eats: 'bg-cat-eats-light dark:bg-cat-eats/10 text-cat-eats',
+  activities: 'bg-cat-activities-light dark:bg-cat-activities/10 text-cat-activities',
 };
 const defaultActiveClass = 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent';
 const inactiveClass = 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised';
 
 function navClass(item) {
   if (route.path !== item.path) return inactiveClass;
-  return item.catColor ? catActiveClass[item.catColor] : defaultActiveClass;
+  return item.cat ? catActiveClass[item.cat] : defaultActiveClass;
 }
 
 // Subset for the mobile bottom tab bar (max 5)
 const mobileTabItems = [
   { path: '/overview', label: 'Overview', icon: 'overview' },
-  { path: '/accommodations', label: 'Stays', icon: 'home', catColor: 'green' },
-  { path: '/activities', label: 'Activities', icon: 'calendar', catColor: 'purple' },
+  { path: '/accommodations', label: 'Stays', icon: 'home', cat: 'stays' },
+  { path: '/activities', label: 'Activities', icon: 'calendar', cat: 'activities' },
   { path: '/itinerary', label: 'Itinerary', icon: 'list' },
   { path: '/map', label: 'Map', icon: 'map' },
 ];
 
 const mobileActiveClass = {
-  green: 'text-flag-green',
-  purple: 'text-flag-purple',
-  red: 'text-flag-red',
+  stays: 'text-cat-stays',
+  eats: 'text-cat-eats',
+  activities: 'text-cat-activities',
 };
 
 function mobileNavClass(item) {
   if (route.path !== item.path) return 'text-warm-500 dark:text-warm-400';
-  return item.catColor ? mobileActiveClass[item.catColor] : 'text-trip-accent';
+  return item.cat ? mobileActiveClass[item.cat] : 'text-trip-accent';
 }
 
 const adminItems = [
@@ -251,7 +251,7 @@ function logout() {
             <router-link
               to="/eats"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              :class="route.path === '/eats' ? catActiveClass.red : inactiveClass"
+              :class="route.path === '/eats' ? catActiveClass.eats : inactiveClass"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10C4 7.239 7.582 6 12 6s8 1.239 8 4H4z" />

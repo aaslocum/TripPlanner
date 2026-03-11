@@ -17,6 +17,15 @@
   --color-trip-accent: #00843d;
   --color-trip-accent-hover: #006d32;
   --color-trip-accent-light: #e6f4ec;
+  --color-cat-stays: #00843d;
+  --color-cat-stays-hover: #006d32;
+  --color-cat-stays-light: #e6f4ec;
+  --color-cat-eats: #9c1a28;
+  --color-cat-eats-hover: #891824;
+  --color-cat-eats-light: #fde8ea;
+  --color-cat-activities: #800080;
+  --color-cat-activities-hover: #6d006d;
+  --color-cat-activities-light: #f5e6f5;
   --color-surface: #ffffff;
   --color-surface-page: #f7f6f3;
   --color-warm-50: #f7f6f3;

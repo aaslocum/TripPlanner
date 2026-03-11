@@ -230,17 +230,17 @@ function eventCount(dateStr) {
 }
 
 function borderColor(type) {
-  return type === 'check_in' ? 'border-l-flag-green'
-       : type === 'check_out' ? 'border-l-flag-red'
-       : type === 'eat' ? 'border-l-flag-red'
-       : 'border-l-flag-purple';
+  return type === 'check_in' ? 'border-l-cat-stays'
+       : type === 'check_out' ? 'border-l-cat-eats'
+       : type === 'eat' ? 'border-l-cat-eats'
+       : 'border-l-cat-activities';
 }
 
 function bgColor(type) {
-  return type === 'check_in' ? 'bg-flag-green-light dark:bg-green-950/50'
-       : type === 'check_out' ? 'bg-flag-red-light dark:bg-red-950/50'
-       : type === 'eat' ? 'bg-flag-red-light dark:bg-red-950/50'
-       : 'bg-flag-purple-light dark:bg-purple-950/50';
+  return type === 'check_in' ? 'bg-cat-stays-light dark:bg-cat-stays/10'
+       : type === 'check_out' ? 'bg-cat-eats-light dark:bg-cat-eats/10'
+       : type === 'eat' ? 'bg-cat-eats-light dark:bg-cat-eats/10'
+       : 'bg-cat-activities-light dark:bg-cat-activities/10';
 }
 
 function typeLabel(type) {
@@ -252,10 +252,10 @@ function typeLabel(type) {
 }
 
 function typeLabelColor(type) {
-  return type === 'check_in' ? 'text-flag-green dark:text-green-400'
-       : type === 'check_out' ? 'text-flag-red dark:text-red-400'
-       : type === 'eat' ? 'text-flag-red dark:text-red-400'
-       : 'text-flag-purple dark:text-purple-400';
+  return type === 'check_in' ? 'text-cat-stays'
+       : type === 'check_out' ? 'text-cat-eats'
+       : type === 'eat' ? 'text-cat-eats'
+       : 'text-cat-activities';
 }
 
 watch(() => tripStore.selectedTripId, fetchItinerary);
@@ -409,7 +409,7 @@ onMounted(fetchItinerary);
         >
           <div class="flex items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wider"
-                  :class="typeLabelColor(event.type) || 'text-flag-purple dark:text-purple-400'">
+                  :class="typeLabelColor(event.type) || 'text-cat-activities'">
               {{ typeLabel(event.type) || 'Activity' }}
             </span>
             <span v-if="event.details?.is_suggested"

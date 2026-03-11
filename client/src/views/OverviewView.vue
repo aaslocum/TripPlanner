@@ -158,11 +158,11 @@ watch(() => tripStore.selectedTripId, fetchStats);
             <div class="text-xs font-display font-bold uppercase tracking-wider text-white/40 mt-1">Days</div>
           </div>
           <div class="text-center">
-            <div class="text-3xl md:text-4xl font-display font-black text-flag-green">{{ accommodationCount }}</div>
+            <div class="text-3xl md:text-4xl font-display font-black text-cat-stays">{{ accommodationCount }}</div>
             <div class="text-xs font-display font-bold uppercase tracking-wider text-white/40 mt-1">{{ accommodationCount === 1 ? 'Stay' : 'Stays' }}</div>
           </div>
           <div class="text-center">
-            <div class="text-3xl md:text-4xl font-display font-black text-flag-purple">{{ activityCount }}</div>
+            <div class="text-3xl md:text-4xl font-display font-black text-cat-activities">{{ activityCount }}</div>
             <div class="text-xs font-display font-bold uppercase tracking-wider text-white/40 mt-1">Activities</div>
           </div>
           <div class="text-center">
