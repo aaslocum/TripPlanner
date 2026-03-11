@@ -1,0 +1,16 @@
+[Unit]
+Description=TripPlanner CI — poll, test, deploy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/TripPlanner
+ExecStart=/root/TripPlanner/ci-poll.sh main
+# Generous timeout — npm install + tests + build can take a few minutes
+TimeoutStartSec=600
+# Don't restart on failure — the timer will trigger the next run
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
