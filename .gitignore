@@ -1,9 +1,27 @@
+﻿# Dependencies
 node_modules/
-client/package-lock.json
+
+# Build output
 dist/
-*.db
-!server/data/tripplanner.db
+build/
+
+# Environment files
 .env
 .env.local
-.DS_Store
+.env.*.local
+
+# Database
+server/data/*.db
+server/data/*.db-journal
+
+# Logs
 *.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+
+# Temp / scratch files
+nul
+test-*.mjs
