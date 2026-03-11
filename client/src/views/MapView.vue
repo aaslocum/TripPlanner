@@ -5,11 +5,13 @@ import { mapsLoader as loader } from '../utils/mapsLoader';
 import { useTripStore } from '../stores/trip';
 import { useAgentStore } from '../stores/agent';
 import { useDarkMode } from '../composables/useDarkMode';
+import { useTripColor, COLOR_MAP } from '../composables/useTripColor';
 import apiClient from '../api/client';
 
 const route = useRoute();
 const tripStore = useTripStore();
 const { isDark } = useDarkMode();
+const { categoryColors } = useTripColor();
 const mapContainer = ref(null);
 const loading = ref(false);
 let map = null;
@@ -89,6 +91,11 @@ async function loadMap() {
       return marker;
     }
 
+    // Resolve category colors for markers
+    const staysC = COLOR_MAP[categoryColors.value.stays];
+    const activitiesC = COLOR_MAP[categoryColors.value.activities];
+    const eatsC = COLOR_MAP[categoryColors.value.eats];
+
     // Geocode accommodations
     for (const acc of accommodations) {
       if (!acc.address) continue;
@@ -100,8 +107,8 @@ async function loadMap() {
             acc.description || 'Accommodation',
             acc.address,
             'Accommodation',
-            '#00843d',
-            { background: '#00843d', borderColor: '#006d32', glyphColor: '#fff' }
+            staysC.accent,
+            { background: staysC.accent, borderColor: staysC.hover, glyphColor: '#fff' }
           );
           hasPoints = true;
         }
@@ -124,8 +131,8 @@ async function loadMap() {
           pos = new google.maps.LatLng(act.latitude, act.longitude);
         }
         if (pos) {
-          addMarkerWithInfo(pos, act.title, act.address, 'Activity', '#059669',
-            { background: '#059669', borderColor: '#047857', glyphColor: '#fff' });
+          addMarkerWithInfo(pos, act.title, act.address, 'Activity', activitiesC.accent,
+            { background: activitiesC.accent, borderColor: activitiesC.hover, glyphColor: '#fff' });
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }
@@ -147,8 +154,8 @@ async function loadMap() {
           pos = new google.maps.LatLng(eat.latitude, eat.longitude);
         }
         if (pos) {
-          addMarkerWithInfo(pos, eat.title, eat.address, 'Dining', '#EA580C',
-            { background: '#EA580C', borderColor: '#C2410C', glyphColor: '#fff' });
+          addMarkerWithInfo(pos, eat.title, eat.address, 'Dining', eatsC.accent,
+            { background: eatsC.accent, borderColor: eatsC.hover, glyphColor: '#fff' });
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }
@@ -173,7 +180,7 @@ async function loadMap() {
         map.panTo(pos);
         map.setZoom(15);
         if (route.query.title) {
-          infoWindow.setContent(makeInfoContent(route.query.title, route.query.address || '', 'Dining', '#EA580C'));
+          infoWindow.setContent(makeInfoContent(route.query.title, route.query.address || '', 'Dining', eatsC.accent));
           infoWindow.setPosition(pos);
           infoWindow.open(map);
         }
@@ -219,13 +226,13 @@ watch(() => agentStore.pendingAction, async (action) => {
 
     <div class="flex gap-4 mb-4">
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-trip-accent"></span> Accommodations
+        <span class="w-3 h-3 rounded-full bg-cat-stays"></span> Stays
       </div>
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-emerald-600"></span> Activities
+        <span class="w-3 h-3 rounded-full bg-cat-activities"></span> Activities
       </div>
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-orange-600"></span> Eats
+        <span class="w-3 h-3 rounded-full bg-cat-eats"></span> Eats
       </div>
     </div>
 

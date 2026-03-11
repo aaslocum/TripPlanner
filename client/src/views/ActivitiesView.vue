@@ -292,12 +292,12 @@ watch(() => agentStore.pendingAction, (action) => {
     <div class="flex items-center justify-between mb-6 gap-3">
       <h2 class="text-2xl font-display font-black uppercase tracking-wide text-flag-black dark:text-warm-100">Activities</h2>
       <div v-if="!showForm">
-        <button @click="openAddForm" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
+        <button @click="openAddForm" class="bg-cat-activities text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cat-activities-hover transition-colors">
           + Add Activity
         </button>
       </div>
       <div v-else class="flex items-center gap-2 flex-wrap justify-end">
-        <button @click="saveActivity" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
+        <button @click="saveActivity" class="bg-cat-activities text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cat-activities-hover transition-colors">
           {{ editingId ? 'Update' : 'Save' }}
         </button>
         <button @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">
@@ -336,7 +336,7 @@ watch(() => agentStore.pendingAction, (action) => {
               v-for="p in predictions"
               :key="p.place_id"
               @click="selectPrediction(p)"
-              class="w-full text-left px-4 py-3 hover:bg-trip-accent-light dark:hover:bg-trip-accent/10 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
+              class="w-full text-left px-4 py-3 hover:bg-cat-activities-light dark:hover:bg-cat-activities/10 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
             >
               <p class="text-sm font-medium text-flag-black dark:text-warm-100">{{ p.structured_formatting.main_text }}</p>
               <p class="text-xs text-warm-500 dark:text-warm-400">{{ p.structured_formatting.secondary_text }}</p>
@@ -347,9 +347,9 @@ watch(() => agentStore.pendingAction, (action) => {
       </div>
 
       <!-- Place selected preview -->
-      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4">
-        <p class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Auto-filled from Google Places</p>
-        <div class="text-sm text-green-700 dark:text-green-300 space-y-1">
+      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border bg-cat-activities-light dark:bg-purple-950 -mx-6 px-6 py-4">
+        <p class="text-sm font-medium text-purple-800 dark:text-purple-300 mb-2">Auto-filled from Google Places</p>
+        <div class="text-sm text-purple-700 dark:text-purple-300 space-y-1">
           <p v-if="form.title"><span class="font-medium">Title:</span> {{ form.title }}</p>
           <p v-if="form.address"><span class="font-medium">Address:</span> {{ form.address }}</p>
           <p v-if="form.rating"><span class="font-medium">Rating:</span> {{ form.rating }} / 5</p>
@@ -403,8 +403,8 @@ watch(() => agentStore.pendingAction, (action) => {
         <div v-if="activity.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
-        <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-trip-accent-light to-warm-50 dark:from-trip-accent/20 dark:to-dark-raised flex items-center justify-center">
-          <svg class="w-8 h-8 text-trip-accent/40 dark:text-trip-accent/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-cat-activities-light to-purple-50 dark:from-cat-activities/20 dark:to-dark-raised flex items-center justify-center">
+          <svg class="w-8 h-8 text-cat-activities/40 dark:text-cat-activities/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -419,13 +419,13 @@ watch(() => agentStore.pendingAction, (action) => {
                 </span>
               </div>
               <p v-if="activity.address" class="text-xs text-warm-500 dark:text-warm-400 mt-0.5">{{ activity.address }}</p>
-              <p v-if="activity.start_datetime" class="text-xs text-trip-accent dark:text-trip-accent mt-1">
+              <p v-if="activity.start_datetime" class="text-xs text-cat-activities dark:text-cat-activities mt-1">
                 {{ formatDate(activity.start_datetime) }}
                 <span v-if="activity.end_datetime"> - {{ formatDate(activity.end_datetime) }}</span>
               </p>
             </div>
             <div v-if="authStore.isAdmin" class="flex gap-1">
-              <button @click="openEditForm(activity)" class="text-warm-400 hover:text-trip-accent dark:hover:text-trip-accent transition-colors p-1">
+              <button @click="openEditForm(activity)" class="text-warm-400 hover:text-cat-activities dark:hover:text-cat-activities transition-colors p-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
