@@ -124,8 +124,8 @@ async function loadMap() {
           pos = new google.maps.LatLng(act.latitude, act.longitude);
         }
         if (pos) {
-          addMarkerWithInfo(pos, act.title, act.address, 'Activity', '#059669',
-            { background: '#059669', borderColor: '#047857', glyphColor: '#fff' });
+          addMarkerWithInfo(pos, act.title, act.address, 'Activity', '#800080',
+            { background: '#800080', borderColor: '#6d006d', glyphColor: '#fff' });
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }
@@ -147,8 +147,8 @@ async function loadMap() {
           pos = new google.maps.LatLng(eat.latitude, eat.longitude);
         }
         if (pos) {
-          addMarkerWithInfo(pos, eat.title, eat.address, 'Dining', '#EA580C',
-            { background: '#EA580C', borderColor: '#C2410C', glyphColor: '#fff' });
+          addMarkerWithInfo(pos, eat.title, eat.address, 'Dining', '#9c1a28',
+            { background: '#9c1a28', borderColor: '#891824', glyphColor: '#fff' });
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }
@@ -173,7 +173,7 @@ async function loadMap() {
         map.panTo(pos);
         map.setZoom(15);
         if (route.query.title) {
-          infoWindow.setContent(makeInfoContent(route.query.title, route.query.address || '', 'Dining', '#EA580C'));
+          infoWindow.setContent(makeInfoContent(route.query.title, route.query.address || '', 'Dining', '#9c1a28'));
           infoWindow.setPosition(pos);
           infoWindow.open(map);
         }
@@ -219,13 +219,13 @@ watch(() => agentStore.pendingAction, async (action) => {
 
     <div class="flex gap-4 mb-4">
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-trip-accent"></span> Accommodations
+        <span class="w-3 h-3 rounded-full bg-flag-green"></span> Stays
       </div>
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-emerald-600"></span> Activities
+        <span class="w-3 h-3 rounded-full bg-flag-purple"></span> Activities
       </div>
       <div class="flex items-center gap-2 text-sm text-warm-700 dark:text-warm-400">
-        <span class="w-3 h-3 rounded-full bg-orange-600"></span> Eats
+        <span class="w-3 h-3 rounded-full bg-flag-red"></span> Eats
       </div>
     </div>
 

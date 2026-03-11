@@ -14,23 +14,48 @@ const { isDark, toggle: toggleDark } = useDarkMode();
 
 const navItems = [
   { path: '/overview', label: 'Overview', icon: 'overview' },
-  { path: '/accommodations', label: 'Stays', icon: 'home' },
+  { path: '/accommodations', label: 'Stays', icon: 'home', catColor: 'green' },
   { path: '/attendees', label: 'Guests', icon: 'attendees' },
-  { path: '/activities', label: 'Activities', icon: 'calendar' },
-  { path: '/eats', label: 'Eats', icon: 'eats' },
+  { path: '/activities', label: 'Activities', icon: 'calendar', catColor: 'purple' },
+  { path: '/eats', label: 'Eats', icon: 'eats', catColor: 'red' },
   { path: '/itinerary', label: 'Itinerary', icon: 'list' },
   { path: '/map', label: 'Map', icon: 'map' },
   { path: '/logistics', label: 'Logistics', icon: 'logistics' },
 ];
 
+// Category color classes for active nav items
+const catActiveClass = {
+  green: 'bg-flag-green-light dark:bg-flag-green/10 text-flag-green',
+  purple: 'bg-flag-purple-light dark:bg-flag-purple/10 text-flag-purple',
+  red: 'bg-flag-red-light dark:bg-flag-red/10 text-flag-red',
+};
+const defaultActiveClass = 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent';
+const inactiveClass = 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised';
+
+function navClass(item) {
+  if (route.path !== item.path) return inactiveClass;
+  return item.catColor ? catActiveClass[item.catColor] : defaultActiveClass;
+}
+
 // Subset for the mobile bottom tab bar (max 5)
 const mobileTabItems = [
   { path: '/overview', label: 'Overview', icon: 'overview' },
-  { path: '/accommodations', label: 'Stays', icon: 'home' },
-  { path: '/activities', label: 'Activities', icon: 'calendar' },
+  { path: '/accommodations', label: 'Stays', icon: 'home', catColor: 'green' },
+  { path: '/activities', label: 'Activities', icon: 'calendar', catColor: 'purple' },
   { path: '/itinerary', label: 'Itinerary', icon: 'list' },
   { path: '/map', label: 'Map', icon: 'map' },
 ];
+
+const mobileActiveClass = {
+  green: 'text-flag-green',
+  purple: 'text-flag-purple',
+  red: 'text-flag-red',
+};
+
+function mobileNavClass(item) {
+  if (route.path !== item.path) return 'text-warm-500 dark:text-warm-400';
+  return item.catColor ? mobileActiveClass[item.catColor] : 'text-trip-accent';
+}
 
 const adminItems = [
   { path: '/trips', label: 'Trips', icon: 'trips' },
@@ -58,7 +83,7 @@ function logout() {
         :key="item.path"
         :to="item.path"
         class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-        :class="route.path === item.path ? 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent' : 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised'"
+        :class="navClass(item)"
       >
         <svg v-if="item.icon === 'overview'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -141,7 +166,7 @@ function logout() {
       :key="item.path"
       :to="item.path"
       class="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors"
-      :class="route.path === item.path ? 'text-trip-accent' : 'text-warm-500 dark:text-warm-400'"
+      :class="mobileNavClass(item)"
     >
       <svg v-if="item.icon === 'overview'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -215,7 +240,7 @@ function logout() {
             <router-link
               to="/attendees"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              :class="route.path === '/attendees' ? 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent' : 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised'"
+              :class="route.path === '/attendees' ? defaultActiveClass : inactiveClass"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -226,7 +251,7 @@ function logout() {
             <router-link
               to="/eats"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              :class="route.path === '/eats' ? 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent' : 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised'"
+              :class="route.path === '/eats' ? catActiveClass.red : inactiveClass"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10C4 7.239 7.582 6 12 6s8 1.239 8 4H4z" />
@@ -239,7 +264,7 @@ function logout() {
             <router-link
               to="/logistics"
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              :class="route.path === '/logistics' ? 'bg-trip-accent-light dark:bg-trip-accent/10 text-trip-accent' : 'text-warm-700 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-dark-raised'"
+              :class="route.path === '/logistics' ? defaultActiveClass : inactiveClass"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 16l1-2h6l2-3h4l4 2 2 1 1 2H1z" />

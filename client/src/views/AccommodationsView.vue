@@ -304,7 +304,7 @@ watch(() => agentStore.pendingAction, async (action) => {
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-2xl font-display font-black uppercase tracking-wide text-flag-black dark:text-warm-100">Accommodations</h2>
       <template v-if="authStore.isAdmin">
-        <button v-if="!showForm" @click="openAddForm" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
+        <button v-if="!showForm" @click="openAddForm" class="bg-flag-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-flag-green-hover transition-colors">
           + Add Accommodation
         </button>
         <button v-else @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">
@@ -400,7 +400,7 @@ watch(() => agentStore.pendingAction, async (action) => {
                   v-for="p in addressPredictions"
                   :key="p.place_id"
                   @click="selectAddressPrediction(p)"
-                  class="w-full text-left px-4 py-3 hover:bg-trip-accent-light dark:hover:bg-trip-accent/10 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
+                  class="w-full text-left px-4 py-3 hover:bg-flag-green-light dark:hover:bg-flag-green/10 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
                 >
                   <p class="text-sm font-medium text-flag-black dark:text-warm-100">{{ p.structured_formatting.main_text }}</p>
                   <p class="text-xs text-warm-500 dark:text-warm-400">{{ p.structured_formatting.secondary_text }}</p>
@@ -426,7 +426,7 @@ watch(() => agentStore.pendingAction, async (action) => {
           <input v-model="form.check_out_datetime" type="datetime-local" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" />
         </div>
       </div>
-      <button @click="saveAccommodation" class="mt-4 bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover">
+      <button @click="saveAccommodation" class="mt-4 bg-flag-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-flag-green-hover">
         {{ editingId ? 'Update' : 'Save' }}
       </button>
     </div>
@@ -438,7 +438,7 @@ watch(() => agentStore.pendingAction, async (action) => {
         :key="acc.accommodation_id"
         @click="selectAccommodation(acc.accommodation_id)"
         class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        :class="selectedAccommodation?.accommodation_id === acc.accommodation_id ? 'bg-trip-accent text-white' : 'bg-surface dark:bg-dark-raised text-warm-700 dark:text-warm-100 border border-warm-300 dark:border-dark-border hover:bg-warm-50 dark:hover:bg-dark-surface'"
+        :class="selectedAccommodation?.accommodation_id === acc.accommodation_id ? 'bg-flag-green text-white' : 'bg-surface dark:bg-dark-raised text-warm-700 dark:text-warm-100 border border-warm-300 dark:border-dark-border hover:bg-warm-50 dark:hover:bg-dark-surface'"
       >
         {{ acc.description || `Accommodation ${acc.accommodation_id}` }}
       </button>
@@ -454,13 +454,13 @@ watch(() => agentStore.pendingAction, async (action) => {
               :key="tab.id"
               @click="activeTab = tab.id"
               class="px-2.5 md:px-6 py-3 text-xs md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0"
-              :class="activeTab === tab.id ? 'border-trip-accent dark:border-trip-accent text-trip-accent dark:text-trip-accent' : 'border-transparent text-warm-500 dark:text-warm-400 hover:text-warm-700 dark:hover:text-warm-100'"
+              :class="activeTab === tab.id ? 'border-flag-green dark:border-flag-green text-flag-green dark:text-flag-green' : 'border-transparent text-warm-500 dark:text-warm-400 hover:text-warm-700 dark:hover:text-warm-100'"
             >
               {{ tab.label }}
             </button>
           </nav>
           <div v-if="authStore.isAdmin" class="hidden md:flex gap-2 pb-1 shrink-0 ml-2">
-            <button @click="openEditForm(selectedAccommodation)" class="text-xs text-trip-accent dark:text-trip-accent hover:text-trip-accent-hover dark:hover:text-trip-accent font-medium px-2 py-1 rounded hover:bg-trip-accent-light dark:hover:bg-trip-accent/10">
+            <button @click="openEditForm(selectedAccommodation)" class="text-xs text-flag-green dark:text-flag-green hover:text-flag-green-hover dark:hover:text-flag-green font-medium px-2 py-1 rounded hover:bg-flag-green-light dark:hover:bg-flag-green/10">
               Edit
             </button>
             <button @click="deleteAccommodation(selectedAccommodation.accommodation_id)" class="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950">

@@ -314,12 +314,12 @@ watch(() => agentStore.pendingAction, async (action) => {
         <p class="text-sm text-warm-500 dark:text-warm-400 mt-0.5">Restaurants, cafes & dining plans</p>
       </div>
       <div v-if="!showForm">
-        <button @click="openAddForm" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">
+        <button @click="openAddForm" class="bg-flag-red text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-flag-red-hover transition-colors">
           + Add Restaurant
         </button>
       </div>
       <div v-else class="flex items-center gap-2 flex-wrap justify-end">
-        <button @click="saveEat" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">
+        <button @click="saveEat" class="bg-flag-red text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-flag-red-hover transition-colors">
           {{ editingId ? 'Update' : 'Save' }}
         </button>
         <button @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">
@@ -358,7 +358,7 @@ watch(() => agentStore.pendingAction, async (action) => {
               v-for="p in predictions"
               :key="p.place_id"
               @click="selectPrediction(p)"
-              class="w-full text-left px-4 py-3 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
+              class="w-full text-left px-4 py-3 hover:bg-flag-red-light dark:hover:bg-red-950 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
             >
               <p class="text-sm font-medium text-flag-black dark:text-warm-100">{{ p.structured_formatting.main_text }}</p>
               <p class="text-xs text-warm-500 dark:text-warm-400">{{ p.structured_formatting.secondary_text }}</p>
@@ -369,9 +369,9 @@ watch(() => agentStore.pendingAction, async (action) => {
       </div>
 
       <!-- Place selected preview -->
-      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border bg-orange-50 dark:bg-orange-950 -mx-6 px-6 py-4">
-        <p class="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2">Auto-filled from Google Places</p>
-        <div class="text-sm text-orange-700 dark:text-orange-300 space-y-1">
+      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border bg-flag-red-light dark:bg-red-950 -mx-6 px-6 py-4">
+        <p class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Auto-filled from Google Places</p>
+        <div class="text-sm text-red-700 dark:text-red-300 space-y-1">
           <p v-if="form.title"><span class="font-medium">Name:</span> {{ form.title }}</p>
           <p v-if="form.address"><span class="font-medium">Address:</span> {{ form.address }}</p>
           <p v-if="form.rating"><span class="font-medium">Rating:</span> {{ form.rating }} / 5</p>
@@ -425,8 +425,8 @@ watch(() => agentStore.pendingAction, async (action) => {
           <div v-if="eat.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
             <img :src="eat.image_url" class="w-full h-full object-cover" />
           </div>
-          <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-orange-100 to-amber-50 dark:from-orange-950 dark:to-amber-950 flex items-center justify-center">
-            <svg class="w-8 h-8 text-orange-300 dark:text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-flag-red-light to-red-50 dark:from-red-950 dark:to-red-900 flex items-center justify-center">
+            <svg class="w-8 h-8 text-flag-red/40 dark:text-flag-red/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
             </svg>
           </div>
@@ -440,13 +440,13 @@ watch(() => agentStore.pendingAction, async (action) => {
                   </span>
                 </div>
                 <p v-if="eat.address" class="text-xs text-warm-500 dark:text-warm-400 mt-0.5">{{ eat.address }}</p>
-                <p v-if="eat.start_datetime" class="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                <p v-if="eat.start_datetime" class="text-xs text-flag-red dark:text-red-400 mt-1">
                   {{ formatDate(eat.start_datetime) }}
                   <span v-if="eat.end_datetime"> - {{ formatDate(eat.end_datetime) }}</span>
                 </p>
               </div>
               <div v-if="authStore.isAdmin" class="flex gap-1">
-                <button @click="openEditForm(eat)" class="text-warm-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors p-1">
+                <button @click="openEditForm(eat)" class="text-warm-400 hover:text-flag-red dark:hover:text-red-400 transition-colors p-1">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
@@ -464,8 +464,8 @@ watch(() => agentStore.pendingAction, async (action) => {
                 {{ priceLabel(eat.estimated_cost) }} · ${{ eat.estimated_cost }}/pp
               </span>
               <span v-if="eat.rating" class="text-xs bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">{{ eat.rating }} stars</span>
-              <button v-if="eat.latitude && eat.longitude" @click="viewOnMap(eat)" class="text-xs text-orange-600 dark:text-orange-400 hover:underline cursor-pointer">View on Map</button>
-              <a v-else-if="eat.source_url" :href="eat.source_url" target="_blank" class="text-xs text-orange-600 dark:text-orange-400 hover:underline">View on Maps ↗</a>
+              <button v-if="eat.latitude && eat.longitude" @click="viewOnMap(eat)" class="text-xs text-flag-red dark:text-red-400 hover:underline cursor-pointer">View on Map</button>
+              <a v-else-if="eat.source_url" :href="eat.source_url" target="_blank" class="text-xs text-flag-red dark:text-red-400 hover:underline">View on Maps ↗</a>
             </div>
           </div>
         </div>

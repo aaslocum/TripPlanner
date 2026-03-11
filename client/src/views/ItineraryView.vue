@@ -230,31 +230,32 @@ function eventCount(dateStr) {
 }
 
 function borderColor(type) {
-  return type === 'check_in' ? 'border-l-green-500'
-       : type === 'check_out' ? 'border-l-red-500'
-       : type === 'eat' ? 'border-l-orange-500'
-       : 'border-l-trip-accent';
+  return type === 'check_in' ? 'border-l-flag-green'
+       : type === 'check_out' ? 'border-l-flag-red'
+       : type === 'eat' ? 'border-l-flag-red'
+       : 'border-l-flag-purple';
 }
 
 function bgColor(type) {
-  return type === 'check_in' ? 'bg-green-50 dark:bg-green-950/50'
-       : type === 'check_out' ? 'bg-red-50 dark:bg-red-950/50'
-       : type === 'eat' ? 'bg-orange-50 dark:bg-orange-950/50'
-       : 'bg-surface dark:bg-dark-surface';
+  return type === 'check_in' ? 'bg-flag-green-light dark:bg-green-950/50'
+       : type === 'check_out' ? 'bg-flag-red-light dark:bg-red-950/50'
+       : type === 'eat' ? 'bg-flag-red-light dark:bg-red-950/50'
+       : 'bg-flag-purple-light dark:bg-purple-950/50';
 }
 
 function typeLabel(type) {
   return type === 'check_in' ? 'Check-in'
        : type === 'check_out' ? 'Check-out'
        : type === 'eat' ? 'Dining'
+       : type === 'activity' ? 'Activity'
        : '';
 }
 
 function typeLabelColor(type) {
-  return type === 'check_in' ? 'text-green-600 dark:text-green-400'
-       : type === 'check_out' ? 'text-red-600 dark:text-red-400'
-       : type === 'eat' ? 'text-orange-600 dark:text-orange-400'
-       : '';
+  return type === 'check_in' ? 'text-flag-green dark:text-green-400'
+       : type === 'check_out' ? 'text-flag-red dark:text-red-400'
+       : type === 'eat' ? 'text-flag-red dark:text-red-400'
+       : 'text-flag-purple dark:text-purple-400';
 }
 
 watch(() => tripStore.selectedTripId, fetchItinerary);
@@ -408,7 +409,7 @@ onMounted(fetchItinerary);
         >
           <div class="flex items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wider"
-                  :class="typeLabelColor(event.type) || 'text-trip-accent dark:text-trip-accent'">
+                  :class="typeLabelColor(event.type) || 'text-flag-purple dark:text-purple-400'">
               {{ typeLabel(event.type) || 'Activity' }}
             </span>
             <span v-if="event.details?.is_suggested"
