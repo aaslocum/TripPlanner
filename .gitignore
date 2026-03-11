@@ -10,8 +10,7 @@ build/
 .env.local
 .env.*.local
 
-# Database
-server/data/*.db
+# Database journals only (DB file itself is tracked — production uses git as persistence layer)
 server/data/*.db-journal
 
 # Logs
