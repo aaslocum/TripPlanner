@@ -223,7 +223,7 @@ function handleKeydown(e) {
 
 // Friendly label for the pending action card
 const ACTION_TYPE_LABELS = {
-  'claim-bed': 'Claim Bed',
+  'request-bed': 'Request Bed',
   'add-activity': 'Add Activity',
   'edit-activity': 'Edit Activity',
   'add-eat': 'Add Restaurant',
@@ -241,7 +241,7 @@ const actionTypeLabel = computed(() => {
 const actionLabel = computed(() => {
   const a = pendingLocalAction.value;
   if (!a) return '';
-  if (a.type === 'claim-bed') return a.description || `Bed #${a.bedId}`;
+  if (a.type === 'request-bed') return a.description || `Bed #${a.bedId}`;
   if (a.type === 'add-activity' || a.type === 'edit-activity') {
     const f = a.formData || {};
     const parts = [f.title || 'Activity'];
@@ -269,7 +269,7 @@ const actionLabel = computed(() => {
 const actionConfirmLabel = computed(() => {
   const a = pendingLocalAction.value;
   if (!a) return 'Confirm';
-  if (a.type === 'claim-bed') return 'Claim It';
+  if (a.type === 'request-bed') return 'Request It';
   if (a.type.startsWith('edit-')) return 'Apply Changes';
   return 'Fill Form';
 });

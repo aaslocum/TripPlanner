@@ -25,49 +25,6 @@ router.put('/:id', adminMiddleware, async (req, res) => {
   res.json({ success: true, data: bed });
 });
 
-// Assign user to bed
-router.put('/:id/assign', adminMiddleware, async (req, res) => {
-  const { user_id } = req.body;
-  const db = await getDb();
-  run(db, 'UPDATE beds SET assigned_user_id = ? WHERE bed_id = ?', [user_id, req.params.id]);
-  const bed = get(db, `
-    SELECT b.*, u.first_name, u.last_name
-    FROM beds b
-    LEFT JOIN users u ON b.assigned_user_id = u.user_id
-    WHERE b.bed_id = ?
-  `, [req.params.id]);
-  res.json({ success: true, data: bed });
-});
-
-// Claim a bed (any authenticated trip member — sets themselves as assigned user)
-router.post('/:id/claim', async (req, res) => {
-  const db = await getDb();
-  const bed = get(db, 'SELECT * FROM beds WHERE bed_id = ?', [req.params.id]);
-  if (!bed) return res.status(404).json({ success: false, error: { message: 'Bed not found' } });
-
-  // Verify user is a member of the trip that owns this bed
-  const bedroom = get(db, 'SELECT accommodation_id FROM bedrooms WHERE bedroom_id = ?', [bed.bedroom_id]);
-  const accom = get(db, 'SELECT trip_id FROM accommodations WHERE accommodation_id = ?', [bedroom?.accommodation_id]);
-  if (accom && req.user.role !== 'admin') {
-    const member = get(db, 'SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?', [accom.trip_id, req.user.user_id]);
-    if (!member) {
-      return res.status(403).json({ success: false, error: { message: 'Not a member of this trip' } });
-    }
-  }
-
-  if (bed.assigned_user_id && bed.assigned_user_id !== req.user.user_id) {
-    return res.status(409).json({ success: false, error: { message: 'This bed is already taken' } });
-  }
-  run(db, 'UPDATE beds SET assigned_user_id = ? WHERE bed_id = ?', [req.user.user_id, req.params.id]);
-  const updated = get(db, `
-    SELECT b.*, u.first_name, u.last_name
-    FROM beds b
-    LEFT JOIN users u ON b.assigned_user_id = u.user_id
-    WHERE b.bed_id = ?
-  `, [req.params.id]);
-  res.json({ success: true, data: updated });
-});
-
 // Delete bed
 router.delete('/:id', adminMiddleware, async (req, res) => {
   const db = await getDb();

@@ -281,19 +281,19 @@ async function deleteAccommodation(id) {
 watch(() => tripStore.selectedTripId, fetchAccommodations);
 onMounted(fetchAccommodations);
 
-// Global agent panel — handle claim-bed action
+// Global agent panel — handle request-bed action
 const agentStore = useAgentStore();
 watch(() => agentStore.pendingAction, async (action) => {
-  if (!action || action.type !== 'claim-bed') return;
+  if (!action || action.type !== 'request-bed') return;
   agentStore.clearAction();
   try {
-    await apiClient.post(`/beds/${action.bedId}/claim`);
+    await apiClient.post('/bed-requests', { bed_id: action.bedId });
     if (selectedAccommodation.value) {
       await selectAccommodation(selectedAccommodation.value.accommodation_id);
     }
-    agentStore.setResult({ success: true, message: "Bed claimed! You're all set." });
+    agentStore.setResult({ success: true, message: "Bed requested! Waiting for confirmation." });
   } catch (err) {
-    const msg = err.response?.data?.error?.message || 'Failed to claim bed';
+    const msg = err.response?.data?.error?.message || 'Failed to request bed';
     agentStore.setResult({ success: false, message: msg });
   }
 });

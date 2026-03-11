@@ -25,7 +25,7 @@ export const AGENT_TOOLS = [
   },
   {
     name: 'get_user_bed',
-    description: 'Find which bed a specific person has been assigned to. Returns the bed type, bedroom name, and accommodation.',
+    description: 'Find which bed a specific person has requested or been confirmed for. Returns the bed type, bedroom name, accommodation, and request status.',
     input_schema: {
       type: 'object',
       properties: {
@@ -54,17 +54,17 @@ export const AGENT_TOOLS = [
   },
   {
     name: 'get_bed_availability',
-    description: 'Get all beds for the trip with their status: bed type, bedroom name, accommodation name, and who they are assigned to (or null if unclaimed).',
+    description: 'Get all beds for the trip with their request status: bed type, bedroom name, accommodation name, and who has requested or been confirmed for each bed.',
     input_schema: { type: 'object', properties: {} },
   },
   {
     name: 'get_unassigned_beds',
-    description: 'Get only the unclaimed/available beds for the trip.',
+    description: 'Get only the beds with no confirmed occupants — available for new requests.',
     input_schema: { type: 'object', properties: {} },
   },
   {
-    name: 'get_bedroom_claims',
-    description: 'Get the formal bedroom claim requests and their status (requested or confirmed) — who has asked for which room.',
+    name: 'get_bed_requests',
+    description: 'Get all bed requests and their status (requested or confirmed) — who has asked for which bed.',
     input_schema: { type: 'object', properties: {} },
   },
   {
@@ -227,7 +227,7 @@ export async function executeTool(toolName, tripId, input = {}) {
     case 'get_accommodation_details': return getAccommodationDetails(db, tripId);
     case 'get_bed_availability':      return getBedAvailability(db, tripId);
     case 'get_unassigned_beds':       return getUnassignedBeds(db, tripId);
-    case 'get_bedroom_claims':        return getBedroomClaims(db, tripId);
+    case 'get_bed_requests':           return getBedRequests(db, tripId);
     case 'get_bedroom_pricing':       return getBedroomPricing(db, tripId);
     case 'get_activities':            return getActivities(db, tripId);
     case 'get_activities_by_date':    return getActivitiesByDate(db, tripId, input.date);
@@ -315,17 +315,18 @@ function getUserBed(db, tripId, name) {
 
   const beds = all(db,
     `SELECT b.bed_id, b.bed_type, br.name as bedroom_name, a.description as accommodation_name,
-            u.first_name, u.last_name
-     FROM beds b
+            u.first_name, u.last_name, breq.status as request_status
+     FROM bed_requests breq
+     JOIN beds b ON breq.bed_id = b.bed_id
      JOIN bedrooms br ON b.bedroom_id = br.bedroom_id
      JOIN accommodations a ON br.accommodation_id = a.accommodation_id
-     LEFT JOIN users u ON b.assigned_user_id = u.user_id
+     JOIN users u ON breq.user_id = u.user_id
      WHERE a.trip_id = ?
        AND (LOWER(u.first_name) LIKE LOWER(?) OR LOWER(u.last_name) LIKE LOWER(?)
             OR LOWER(u.first_name || ' ' || u.last_name) LIKE LOWER(?))`,
     [tripId, `%${first}%`, `%${last || first}%`, `%${name}%`]);
 
-  return beds.length > 0 ? beds : { result: `No bed found assigned to "${name}"` };
+  return beds.length > 0 ? beds : { result: `No bed found for "${name}"` };
 }
 
 function getUserPreferences(db, tripId, name) {
@@ -359,19 +360,25 @@ function getAccommodationDetails(db, tripId) {
 }
 
 function getBedAvailability(db, tripId) {
-  return all(db,
+  const beds = all(db,
     `SELECT b.bed_id, b.bed_type,
             br.name as bedroom_name, br.price_share_adjustment,
-            a.description as accommodation_name,
-            CASE WHEN b.assigned_user_id IS NOT NULL
-              THEN u.first_name || ' ' || u.last_name ELSE NULL END as assigned_to
+            a.description as accommodation_name
      FROM accommodations a
      JOIN bedrooms br ON a.accommodation_id = br.accommodation_id
      JOIN beds b ON br.bedroom_id = b.bedroom_id
-     LEFT JOIN users u ON b.assigned_user_id = u.user_id
      WHERE a.trip_id = ?
      ORDER BY a.description, br.name`,
     [tripId]);
+  for (const bed of beds) {
+    bed.requests = all(db,
+      `SELECT breq.status, u.first_name || ' ' || u.last_name as name
+       FROM bed_requests breq JOIN users u ON breq.user_id = u.user_id
+       WHERE breq.bed_id = ?
+       ORDER BY breq.status DESC`,
+      [bed.bed_id]);
+  }
+  return beds;
 }
 
 function getUnassignedBeds(db, tripId) {
@@ -382,23 +389,28 @@ function getUnassignedBeds(db, tripId) {
      FROM accommodations a
      JOIN bedrooms br ON a.accommodation_id = br.accommodation_id
      JOIN beds b ON br.bedroom_id = b.bedroom_id
-     WHERE a.trip_id = ? AND b.assigned_user_id IS NULL
+     WHERE a.trip_id = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM bed_requests breq
+         WHERE breq.bed_id = b.bed_id AND breq.status = 'confirmed'
+       )
      ORDER BY a.description, br.name`,
     [tripId]);
 }
 
-function getBedroomClaims(db, tripId) {
+function getBedRequests(db, tripId) {
   return all(db,
-    `SELECT bc.claim_id, bc.status,
+    `SELECT breq.request_id, breq.status, b.bed_type,
             br.name as bedroom_name, a.description as accommodation_name,
             u.first_name, u.last_name, u.email,
-            bc.created_at
-     FROM bedroom_claims bc
-     JOIN bedrooms br ON bc.bedroom_id = br.bedroom_id
+            breq.created_at
+     FROM bed_requests breq
+     JOIN beds b ON breq.bed_id = b.bed_id
+     JOIN bedrooms br ON b.bedroom_id = br.bedroom_id
      JOIN accommodations a ON br.accommodation_id = a.accommodation_id
-     JOIN users u ON bc.user_id = u.user_id
+     JOIN users u ON breq.user_id = u.user_id
      WHERE a.trip_id = ?
-     ORDER BY bc.status, u.first_name`,
+     ORDER BY breq.status, u.first_name`,
     [tripId]);
 }
 

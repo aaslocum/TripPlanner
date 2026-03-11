@@ -206,18 +206,25 @@ async function buildPageContext(page, tripId) {
   switch (page) {
     case 'accommodations': {
       const beds = all(db,
-        `SELECT b.bed_id, b.bed_type, b.assigned_user_id,
+        `SELECT b.bed_id, b.bed_type,
                 br.bedroom_id, br.name AS bedroom_name,
-                a.accommodation_id, a.description AS accommodation_name,
-                u.first_name, u.last_name
+                a.accommodation_id, a.description AS accommodation_name
          FROM beds b
          JOIN bedrooms br ON b.bedroom_id = br.bedroom_id
          JOIN accommodations a ON br.accommodation_id = a.accommodation_id
-         LEFT JOIN users u ON b.assigned_user_id = u.user_id
          WHERE a.trip_id = ?
          ORDER BY a.accommodation_id, br.bedroom_id, b.bed_id`,
         [tripId]
       );
+      for (const bed of beds) {
+        bed.requests = all(db,
+          `SELECT breq.request_id, breq.status, u.first_name, u.last_name, u.user_id
+           FROM bed_requests breq JOIN users u ON breq.user_id = u.user_id
+           WHERE breq.bed_id = ?
+           ORDER BY breq.status DESC, breq.created_at`,
+          [bed.bed_id]
+        );
+      }
       return { beds };
     }
     case 'activities': {
@@ -310,16 +317,22 @@ function formatPageContext(page, pageData) {
     case 'accommodations': {
       const { beds } = pageData;
       if (beds?.length) {
-        lines.push('\nDetailed bed availability (for helping user choose and claim a bed):');
+        lines.push('\nDetailed bed availability (for helping user choose and request a bed):');
         let lastAccom = null;
         beds.forEach(b => {
           if (b.accommodation_name !== lastAccom) {
             lines.push(`  ${b.accommodation_name || 'Accommodation'}:`);
             lastAccom = b.accommodation_name;
           }
-          const status = b.first_name
-            ? `Taken by ${b.first_name} ${b.last_name}`
-            : 'AVAILABLE';
+          let status = 'AVAILABLE';
+          if (b.requests?.length) {
+            const confirmed = b.requests.filter(r => r.status === 'confirmed');
+            const pending = b.requests.filter(r => r.status === 'requested');
+            const parts = [];
+            if (confirmed.length) parts.push(`Confirmed: ${confirmed.map(r => `${r.first_name} ${r.last_name}`).join(', ')}`);
+            if (pending.length) parts.push(`Requested by: ${pending.map(r => `${r.first_name} ${r.last_name}`).join(', ')}`);
+            if (parts.length) status = parts.join(' | ');
+          }
           lines.push(`    - Bed #${b.bed_id} | ${b.bed_type} | ${b.bedroom_name} | ${status}`);
         });
       }
@@ -445,12 +458,12 @@ const PROMPT_DEFAULTS = {
 4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.
 5. ADMIN BOUNDARY: You must NEVER modify admin settings, AI configuration, user management, or any administrative features. You can only help with trip-related tasks: activities, restaurants, logistics, beds, and map navigation.`,
 
-  global_chat_accommodations_prompt: `You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and claim a specific bed.
+  global_chat_accommodations_prompt: `You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and request a specific bed.
 
-Only reference beds that actually appear in the data below. Do not invent room names or bed types.
+Only reference beds that actually appear in the data below. Do not invent room names or bed types. Note that beds may already have confirmed occupants or pending requests — share this info when relevant.
 
 When the user has confirmed which bed they want, return ONLY valid JSON (no other text):
-{"message": "Claiming that bed for you now!", "action": {"type": "claim-bed", "bedId": 3, "description": "Queen bed in Master Bedroom"}}
+{"message": "Requesting that bed for you now!", "action": {"type": "request-bed", "bedId": 3, "description": "Queen bed in Master Bedroom"}}
 
 Replace 3 with the actual bed_id. If you need to clarify which bed, ask in plain text.
 

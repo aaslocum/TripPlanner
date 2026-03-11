@@ -22,21 +22,18 @@ router.get('/:id', async (req, res) => {
 
   const bedrooms = all(db, 'SELECT * FROM bedrooms WHERE accommodation_id = ?', [req.params.id]);
   for (const bedroom of bedrooms) {
-    bedroom.beds = all(db, `
-      SELECT b.*, u.first_name, u.last_name
-      FROM beds b
-      LEFT JOIN users u ON b.assigned_user_id = u.user_id
-      WHERE b.bedroom_id = ?
-    `, [bedroom.bedroom_id]);
+    bedroom.beds = all(db, 'SELECT * FROM beds WHERE bedroom_id = ?', [bedroom.bedroom_id]);
+    for (const bed of bedroom.beds) {
+      bed.requests = all(db, `
+        SELECT br.*, u.first_name, u.last_name
+        FROM bed_requests br JOIN users u ON br.user_id = u.user_id
+        WHERE br.bed_id = ?
+        ORDER BY br.status DESC, br.created_at
+      `, [bed.bed_id]);
+    }
     bedroom.images = all(db,
       'SELECT * FROM accommodation_images WHERE bedroom_id = ? ORDER BY sort_order',
       [bedroom.bedroom_id]);
-    bedroom.claims = all(db, `
-      SELECT bc.*, u.first_name, u.last_name
-      FROM bedroom_claims bc JOIN users u ON bc.user_id = u.user_id
-      WHERE bc.bedroom_id = ?
-      ORDER BY bc.status DESC, bc.created_at
-    `, [bedroom.bedroom_id]);
   }
 
   const images = all(db, 'SELECT * FROM accommodation_images WHERE accommodation_id = ? AND bedroom_id IS NULL ORDER BY sort_order',
