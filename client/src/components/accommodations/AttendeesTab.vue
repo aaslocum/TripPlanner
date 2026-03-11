@@ -159,45 +159,47 @@ onMounted(() => {
       <div
         v-for="member in visibleMembers"
         :key="member.user_id"
-        class="flex items-center justify-between bg-warm-50 dark:bg-dark-raised rounded-lg px-4 py-3"
+        class="flex items-start justify-between gap-2 bg-warm-50 dark:bg-dark-raised rounded-lg px-3 py-3 sm:px-4 sm:items-center"
       >
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-trip-accent-light dark:bg-trip-accent/20 text-trip-accent flex items-center justify-center text-sm font-semibold">
+        <div class="flex items-start gap-3 min-w-0 sm:items-center">
+          <div class="w-9 h-9 rounded-full bg-trip-accent-light dark:bg-trip-accent/20 text-trip-accent flex items-center justify-center text-sm font-semibold shrink-0">
             {{ initials(member) }}
           </div>
-          <div>
-            <p class="text-sm font-medium text-flag-black dark:text-warm-100">{{ displayName(member) }}</p>
-            <p v-if="showEmail(member) && (member.first_name || member.last_name)" class="text-xs text-warm-500 dark:text-warm-400">{{ member.email }}</p>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <p class="text-sm font-medium text-flag-black dark:text-warm-100 truncate">{{ displayName(member) }}</p>
+              <span v-if="member.role === 'admin'" class="text-xs bg-trip-accent-light dark:bg-trip-accent/20 text-trip-accent px-2 py-0.5 rounded-full whitespace-nowrap">Admin</span>
+              <!-- Admin: clickable RSVP badge -->
+              <button
+                v-if="authStore.isAdmin"
+                @click.stop="updateMemberRsvp(member.user_id, nextRsvpStatus(member.rsvp_status))"
+                :class="[
+                  'text-xs px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all whitespace-nowrap',
+                  member.rsvp_status === 'yes' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:ring-green-400' :
+                  member.rsvp_status === 'no' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 hover:ring-red-400' :
+                  'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 hover:ring-amber-400'
+                ]"
+                :title="`Click to change (${member.rsvp_status || 'pending'} → ${nextRsvpStatus(member.rsvp_status)})`"
+              >
+                {{ member.rsvp_status === 'yes' ? 'Confirmed' : member.rsvp_status === 'no' ? 'Not attending' : 'Pending' }}
+              </button>
+              <!-- Non-admin: static badge -->
+              <template v-else>
+                <span v-if="member.rsvp_status === 'yes'" class="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap">Confirmed</span>
+                <span v-else-if="member.rsvp_status === 'no'" class="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full whitespace-nowrap">Not attending</span>
+                <span v-else class="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full whitespace-nowrap">Pending</span>
+              </template>
+            </div>
+            <p v-if="showEmail(member) && (member.first_name || member.last_name)" class="text-xs text-warm-500 dark:text-warm-400 truncate">{{ member.email }}</p>
             <p v-if="member.arrival_date || member.departure_date" class="text-xs text-warm-400 dark:text-warm-500">
               {{ formatDateRange(member.arrival_date, member.departure_date) }}
             </p>
           </div>
-          <span v-if="member.role === 'admin'" class="text-xs bg-trip-accent-light dark:bg-trip-accent/20 text-trip-accent px-2 py-0.5 rounded-full">Admin</span>
-          <!-- Admin: clickable RSVP badge -->
-          <button
-            v-if="authStore.isAdmin"
-            @click.stop="updateMemberRsvp(member.user_id, nextRsvpStatus(member.rsvp_status))"
-            :class="[
-              'text-xs px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all',
-              member.rsvp_status === 'yes' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:ring-green-400' :
-              member.rsvp_status === 'no' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 hover:ring-red-400' :
-              'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 hover:ring-amber-400'
-            ]"
-            :title="`Click to change (${member.rsvp_status || 'pending'} → ${nextRsvpStatus(member.rsvp_status)})`"
-          >
-            {{ member.rsvp_status === 'yes' ? 'Confirmed' : member.rsvp_status === 'no' ? 'Not attending' : 'Pending' }}
-          </button>
-          <!-- Non-admin: static badge -->
-          <template v-else>
-            <span v-if="member.rsvp_status === 'yes'" class="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Confirmed</span>
-            <span v-else-if="member.rsvp_status === 'no'" class="text-xs bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full">Not attending</span>
-            <span v-else class="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">Pending</span>
-          </template>
         </div>
         <button
           v-if="authStore.isAdmin"
           @click="removeMember(member.user_id)"
-          class="text-warm-400 hover:text-red-500 transition-colors"
+          class="text-warm-400 hover:text-red-500 transition-colors shrink-0 mt-1 sm:mt-0"
           title="Remove from trip"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,10 +264,10 @@ onMounted(() => {
       <!-- Add existing user -->
       <div class="border-t border-warm-200 dark:border-dark-border pt-5 mt-5">
         <h4 class="text-sm font-medium text-warm-700 dark:text-warm-300 mb-2">Add Existing User</h4>
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2">
           <select
             v-model="selectedUserId"
-            class="flex-1 border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100"
+            class="w-full sm:flex-1 border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100"
           >
             <option value="" disabled>Select a user...</option>
             <option v-for="user in availableUsers" :key="user.user_id" :value="user.user_id">
@@ -275,7 +277,7 @@ onMounted(() => {
           <button
             @click="addMember"
             :disabled="!selectedUserId"
-            class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors disabled:opacity-50"
+            class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors disabled:opacity-50 shrink-0"
           >
             Add
           </button>
