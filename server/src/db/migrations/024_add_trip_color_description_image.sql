@@ -1,0 +1,3 @@
+ALTER TABLE trips ADD COLUMN color TEXT NOT NULL DEFAULT 'green';
+ALTER TABLE trips ADD COLUMN description TEXT;
+ALTER TABLE trips ADD COLUMN image_url TEXT;

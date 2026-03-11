@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { Loader } from '@googlemaps/js-api-loader';
+import { mapsLoader as loader } from '../utils/mapsLoader';
 import { useAuthStore } from '../stores/auth';
 import { useTripStore } from '../stores/trip';
 import { useAgentStore } from '../stores/agent';
@@ -35,11 +35,6 @@ let placesService = null;
 let sessionToken = null;
 let debounceTimer = null;
 
-const loader = new Loader({
-  apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-  version: 'weekly',
-  libraries: ['places'],
-});
 
 async function initPlaces() {
   await loader.importLibrary('places');
@@ -186,8 +181,14 @@ async function fetchActivities() {
 async function saveActivity() {
   let end_datetime = null;
   if (form.value.start_datetime && form.value.duration) {
-    const endMs = new Date(form.value.start_datetime).getTime() + Number(form.value.duration) * 3600000;
-    end_datetime = new Date(endMs).toISOString().slice(0, 16);
+    const endDate = new Date(new Date(form.value.start_datetime).getTime() + Number(form.value.duration) * 3600000);
+    // Format as local datetime to match start_datetime (avoid toISOString which converts to UTC)
+    const y = endDate.getFullYear();
+    const mo = String(endDate.getMonth() + 1).padStart(2, '0');
+    const d = String(endDate.getDate()).padStart(2, '0');
+    const h = String(endDate.getHours()).padStart(2, '0');
+    const mi = String(endDate.getMinutes()).padStart(2, '0');
+    end_datetime = `${y}-${mo}-${d}T${h}:${mi}`;
   }
   const { duration, ...rest } = form.value;
   const payload = {
@@ -242,19 +243,46 @@ const groupedActivities = computed(() => {
 watch(() => tripStore.selectedTripId, fetchActivities);
 onMounted(fetchActivities);
 
-// Global agent panel — handle add-activity action
+// Global agent panel — handle add-activity and edit-activity actions
 const agentStore = useAgentStore();
 watch(() => agentStore.pendingAction, (action) => {
-  if (!action || action.type !== 'add-activity') return;
-  agentStore.clearAction();
-  try {
-    editingId.value = null;
-    form.value = { ...emptyForm };
-    onAgentFill(action.formData || {});
-    showForm.value = true;
-    agentStore.setResult({ success: true, message: 'Activity form pre-filled! Review and save when ready.' });
-  } catch (err) {
-    agentStore.setResult({ success: false, message: 'Failed to fill activity form.' });
+  if (!action) return;
+
+  if (action.type === 'add-activity') {
+    agentStore.clearAction();
+    try {
+      editingId.value = null;
+      form.value = { ...emptyForm };
+      onAgentFill(action.formData || {});
+      showForm.value = true;
+      agentStore.setResult({ success: true, message: 'Activity form pre-filled! Review and save when ready.' });
+    } catch (err) {
+      agentStore.setResult({ success: false, message: 'Failed to fill activity form.' });
+    }
+  }
+
+  if (action.type === 'edit-activity') {
+    agentStore.clearAction();
+    try {
+      const existing = activities.value.find(a => a.activity_id === action.activityId);
+      if (!existing) {
+        agentStore.setResult({ success: false, message: `Activity #${action.activityId} not found.` });
+        return;
+      }
+      // Open edit form with existing data
+      openEditForm(existing);
+      // Overlay agent's changes
+      const fd = action.formData || {};
+      if (fd.title) form.value.title = fd.title;
+      if (fd.description) form.value.description = fd.description;
+      if (fd.address) form.value.address = fd.address;
+      if (fd.estimated_cost != null) form.value.estimated_cost = fd.estimated_cost;
+      if (fd.duration != null) form.value.duration = fd.duration;
+      if (fd.start_datetime) form.value.start_datetime = fd.start_datetime;
+      agentStore.setResult({ success: true, message: 'Edit form loaded with changes — review and save when ready.' });
+    } catch (err) {
+      agentStore.setResult({ success: false, message: 'Failed to load edit form.' });
+    }
   }
 });
 </script>
@@ -262,64 +290,64 @@ watch(() => agentStore.pendingAction, (action) => {
 <template>
   <div>
     <div class="flex items-center justify-between mb-6 gap-3">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Activities</h2>
+      <h2 class="text-2xl font-display font-black uppercase tracking-wide text-flag-black dark:text-warm-100">Activities</h2>
       <div v-if="!showForm">
-        <button @click="openAddForm" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <button @click="openAddForm" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
           + Add Activity
         </button>
       </div>
       <div v-else class="flex items-center gap-2 flex-wrap justify-end">
-        <button @click="saveActivity" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <button @click="saveActivity" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover transition-colors">
           {{ editingId ? 'Update' : 'Save' }}
         </button>
-        <button @click="cancelForm" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors">
+        <button @click="cancelForm" class="bg-warm-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-warm-600 transition-colors">
           Cancel
         </button>
       </div>
     </div>
 
     <!-- Add/Edit form -->
-    <div v-if="showForm" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
+    <div v-if="showForm" class="bg-surface dark:bg-dark-surface rounded-xl shadow-sm border border-warm-200 dark:border-dark-border p-6 mb-6">
+      <h3 class="text-lg font-semibold text-flag-black dark:text-warm-100 mb-4">{{ editingId ? 'Edit Activity' : 'New Activity' }}</h3>
 
       <!-- Google Places search -->
-      <div class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Google Places</label>
+      <div class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border">
+        <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Search Google Places</label>
         <div class="relative">
           <div class="relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               v-model="searchQuery"
               @input="onSearchInput"
               @focus="showDropdown = predictions.length > 0"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg pl-10 pr-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100"
+              class="w-full border border-warm-300 dark:border-dark-border rounded-lg pl-10 pr-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100"
               placeholder="Search for a place, restaurant, attraction..."
             />
-            <svg v-if="searching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+            <svg v-if="searching" class="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 text-warm-400" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
           </div>
           <!-- Predictions dropdown -->
-          <div v-if="showDropdown && predictions.length > 0" class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          <div v-if="showDropdown && predictions.length > 0" class="absolute z-10 w-full mt-1 bg-surface dark:bg-dark-raised border border-warm-200 dark:border-dark-border rounded-lg shadow-lg max-h-64 overflow-y-auto">
             <button
               v-for="p in predictions"
               :key="p.place_id"
               @click="selectPrediction(p)"
-              class="w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+              class="w-full text-left px-4 py-3 hover:bg-trip-accent-light dark:hover:bg-trip-accent/10 transition-colors border-b border-warm-100 dark:border-dark-border last:border-b-0"
             >
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ p.structured_formatting.main_text }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ p.structured_formatting.secondary_text }}</p>
+              <p class="text-sm font-medium text-flag-black dark:text-warm-100">{{ p.structured_formatting.main_text }}</p>
+              <p class="text-xs text-warm-500 dark:text-warm-400">{{ p.structured_formatting.secondary_text }}</p>
             </button>
           </div>
         </div>
-        <p class="text-xs text-gray-400 mt-1">Search for a Google Place to auto-populate fields below</p>
+        <p class="text-xs text-warm-400 mt-1">Search for a Google Place to auto-populate fields below</p>
       </div>
 
       <!-- Place selected preview -->
-      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4">
+      <div v-if="placeSelected" class="mb-5 pb-5 border-b border-warm-200 dark:border-dark-border bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4">
         <p class="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Auto-filled from Google Places</p>
         <div class="text-sm text-green-700 dark:text-green-300 space-y-1">
           <p v-if="form.title"><span class="font-medium">Title:</span> {{ form.title }}</p>
@@ -331,95 +359,95 @@ watch(() => agentStore.pendingAction, (action) => {
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
-          <input v-model="form.title" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Hiking at..." />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Title</label>
+          <input v-model="form.title" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" placeholder="Hiking at..." />
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description <span class="text-gray-400 font-normal">(optional)</span></label>
-          <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="Details about the activity..."></textarea>
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Description <span class="text-warm-400 font-normal">(optional)</span></label>
+          <textarea v-model="form.description" rows="3" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" placeholder="Details about the activity..."></textarea>
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-          <input v-model="form.address" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="123 Main St..." />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Address</label>
+          <input v-model="form.address" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" placeholder="123 Main St..." />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image URL</label>
-          <input v-model="form.image_url" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Image URL</label>
+          <input v-model="form.image_url" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Google Place ID</label>
-          <input v-model="form.google_place_id" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" readonly />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Google Place ID</label>
+          <input v-model="form.google_place_id" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" readonly />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start</label>
-          <input v-model="form.start_datetime" type="datetime-local" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Start</label>
+          <input v-model="form.start_datetime" type="datetime-local" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (hours)</label>
-          <input v-model="form.duration" type="number" min="0.5" step="0.5" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 2 or 1.5" />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Duration (hours)</label>
+          <input v-model="form.duration" type="number" min="0.5" step="0.5" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" placeholder="e.g. 2 or 1.5" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estimated Cost</label>
-          <input v-model="form.estimated_cost" type="number" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:text-gray-100" />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Estimated Cost</label>
+          <input v-model="form.estimated_cost" type="number" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" />
         </div>
       </div>
     </div>
 
     <!-- Activity panels grouped by date -->
     <div v-for="[date, dayActivities] in groupedActivities" :key="date">
-      <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-700 pb-2 mt-6 first:mt-0 mb-4">
+      <h3 class="text-sm font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wide border-b border-warm-200 dark:border-dark-border pb-2 mt-6 first:mt-0 mb-4">
         {{ date === 'unscheduled' ? 'Unscheduled' : formatDayHeader(date) }}
       </h3>
-      <div class="space-y-4">
-      <div v-for="activity in dayActivities" :key="activity.activity_id" class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row">
-        <div v-if="activity.image_url" class="w-full h-48 md:w-64 md:h-auto flex-shrink-0">
+      <div class="space-y-3">
+      <div v-for="activity in dayActivities" :key="activity.activity_id" class="bg-surface dark:bg-dark-surface rounded-lg shadow-sm border border-warm-200 dark:border-dark-border overflow-hidden flex flex-col md:flex-row">
+        <div v-if="activity.image_url" class="w-full h-36 md:w-44 md:h-auto flex-shrink-0">
           <img :src="activity.image_url" class="w-full h-full object-cover" />
         </div>
-        <div v-else class="w-full h-32 md:w-64 md:h-auto flex-shrink-0 bg-gradient-to-br from-indigo-100 to-blue-50 dark:from-indigo-950 dark:to-blue-950 flex items-center justify-center">
-          <svg class="w-12 h-12 text-indigo-300 dark:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-else class="w-full h-24 md:w-44 md:h-auto flex-shrink-0 bg-gradient-to-br from-trip-accent-light to-warm-50 dark:from-trip-accent/20 dark:to-dark-raised flex items-center justify-center">
+          <svg class="w-8 h-8 text-trip-accent/40 dark:text-trip-accent/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <div class="flex-1 p-4 md:p-6">
+        <div class="flex-1 p-3 md:p-4">
           <div class="flex items-start justify-between">
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ activity.title }}</h3>
+                <h3 class="text-base font-semibold text-flag-black dark:text-warm-100">{{ activity.title }}</h3>
                 <span v-if="activity.is_suggested" class="text-xs bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
                   Suggested
                 </span>
               </div>
-              <p v-if="activity.address" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ activity.address }}</p>
-              <p v-if="activity.start_datetime" class="text-sm text-indigo-600 dark:text-indigo-400 mt-1">
+              <p v-if="activity.address" class="text-xs text-warm-500 dark:text-warm-400 mt-0.5">{{ activity.address }}</p>
+              <p v-if="activity.start_datetime" class="text-xs text-trip-accent dark:text-trip-accent mt-1">
                 {{ formatDate(activity.start_datetime) }}
                 <span v-if="activity.end_datetime"> - {{ formatDate(activity.end_datetime) }}</span>
               </p>
             </div>
             <div v-if="authStore.isAdmin" class="flex gap-1">
-              <button @click="openEditForm(activity)" class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button @click="openEditForm(activity)" class="text-warm-400 hover:text-trip-accent dark:hover:text-trip-accent transition-colors p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button @click="deleteActivity(activity.activity_id)" class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button @click="deleteActivity(activity.activity_id)" class="text-warm-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
             </div>
           </div>
-          <p v-if="activity.description" class="text-sm text-gray-600 dark:text-gray-400 mt-3">{{ activity.description }}</p>
-          <div class="flex items-center gap-3 mt-3">
-            <span v-if="activity.estimated_cost" class="text-sm bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">${{ activity.estimated_cost }}</span>
-            <span v-if="activity.rating" class="text-sm bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded-full">{{ activity.rating }} stars</span>
+          <p v-if="activity.description" class="text-xs text-warm-600 dark:text-warm-400 mt-2 line-clamp-2">{{ activity.description }}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span v-if="activity.estimated_cost" class="text-xs bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">${{ activity.estimated_cost }}</span>
+            <span v-if="activity.rating" class="text-xs bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">{{ activity.rating }} stars</span>
           </div>
         </div>
       </div>
       </div>
     </div>
 
-    <div v-if="!loading && activities.length === 0" class="text-center py-16 text-gray-500 dark:text-gray-400">
+    <div v-if="!loading && activities.length === 0" class="text-center py-16 text-warm-500 dark:text-warm-400">
       <p class="text-lg">No activities planned yet</p>
       <p class="text-sm mt-1">Add activities to build your trip itinerary</p>
     </div>

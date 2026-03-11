@@ -16,7 +16,13 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/accommodations',
+    redirect: '/overview',
+  },
+  {
+    path: '/overview',
+    name: 'Overview',
+    component: () => import('../views/OverviewView.vue'),
+    meta: { requiresAuth: true },
   },
   {
     path: '/accommodations',
@@ -31,6 +37,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/eats',
+    name: 'Eats',
+    component: () => import('../views/EatsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/itinerary',
     name: 'Itinerary',
     component: () => import('../views/ItineraryView.vue'),
@@ -41,6 +53,18 @@ const routes = [
     name: 'Map',
     component: () => import('../views/MapView.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/attendees',
+    name: 'Guests',
+    component: () => import('../views/AttendeesView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/trips',
+    name: 'Trips',
+    component: () => import('../views/TripsView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/users',
@@ -59,6 +83,12 @@ const routes = [
     name: 'AiSettings',
     component: () => import('../views/AiSettingsView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/logistics',
+    name: 'Logistics',
+    component: () => import('../views/LogisticsView.vue'),
+    meta: { requiresAuth: true },
   },
 ];
 

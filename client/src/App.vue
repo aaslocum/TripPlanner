@@ -2,12 +2,14 @@
 import { ref, watch } from 'vue';
 import { useAuthStore } from './stores/auth';
 import { useTripStore } from './stores/trip';
+import { useTripColor } from './composables/useTripColor';
 import AppHeader from './components/layout/AppHeader.vue';
 import AppSidebar from './components/layout/AppSidebar.vue';
 import GlobalAgentPanel from './components/agent/GlobalAgentPanel.vue';
 
 const authStore = useAuthStore();
 const tripStore = useTripStore();
+useTripColor();
 const drawerOpen = ref(false);
 
 // Fetch trips when user becomes authenticated
@@ -19,7 +21,7 @@ watch(() => authStore.isAuthenticated, async (isAuth) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
+  <div class="min-h-screen bg-surface-page dark:bg-dark-bg transition-colors duration-200">
     <template v-if="authStore.isAuthenticated">
       <AppHeader @toggle-menu="drawerOpen = !drawerOpen" />
       <div class="flex">

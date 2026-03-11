@@ -13,6 +13,11 @@ router.get('/me', authMiddleware, (req, res) => {
   res.json({ success: true, data: user });
 });
 
+// Check if dev bypass is available (lightweight, no auth)
+router.get('/dev-status', (req, res) => {
+  res.json({ success: true, data: { devBypass: config.authBypass } });
+});
+
 // Dev login (only available in bypass mode)
 router.get('/dev-login', async (req, res) => {
   if (!config.authBypass) {

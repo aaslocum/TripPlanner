@@ -142,19 +142,19 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
 <template>
   <div class="max-w-full md:max-w-[900px]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Bedrooms</h3>
-      <button v-if="authStore.isAdmin" @click="showForm = !showForm" class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium">
+      <h3 class="text-lg font-semibold text-flag-black dark:text-warm-100">Bedrooms</h3>
+      <button v-if="authStore.isAdmin" @click="showForm = !showForm" class="text-sm text-trip-accent hover:text-trip-accent-hover font-medium">
         {{ showForm ? 'Cancel' : '+ Add Bedroom' }}
       </button>
     </div>
 
-    <div v-if="showForm" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+    <div v-if="showForm" class="bg-warm-50 dark:bg-dark-raised rounded-lg p-4 mb-4">
       <div class="flex gap-4 items-end">
         <div class="flex-1">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room Name</label>
-          <input v-model="form.name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-100" placeholder="Master Bedroom" />
+          <label class="block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1">Room Name</label>
+          <input v-model="form.name" class="w-full border border-warm-300 dark:border-dark-border rounded-lg px-3 py-2 text-sm dark:bg-dark-raised dark:text-warm-100" placeholder="Master Bedroom" />
         </div>
-        <button @click="addBedroom" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Add</button>
+        <button @click="addBedroom" class="bg-trip-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-trip-accent-hover">Add</button>
       </div>
     </div>
 
@@ -162,31 +162,31 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
       <div
         v-for="bedroom in accommodation.bedrooms"
         :key="bedroom.bedroom_id"
-        class="flex flex-col md:flex-row border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900"
+        class="flex flex-col md:flex-row border border-warm-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm bg-surface dark:bg-dark-surface"
       >
         <!-- Image carousel -->
-        <div class="relative w-full h-48 md:w-60 shrink-0 bg-gray-100 dark:bg-gray-800">
+        <div class="relative w-full h-48 md:w-60 shrink-0 bg-warm-100 dark:bg-dark-raised">
           <img
             v-if="bedroom.images?.length"
             :src="bedroom.images[currentIndex(bedroom)]?.image_url"
             class="w-full h-full object-cover"
           />
-          <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
+          <div v-else class="w-full h-full flex items-center justify-center text-warm-300">
             <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
             </svg>
           </div>
           <!-- Carousel arrows -->
           <template v-if="bedroom.images?.length > 1">
             <button
               @click.stop="prevImage(bedroom)"
-              class="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 shadow transition-colors"
+              class="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 dark:bg-dark-raised/70 hover:bg-white dark:hover:bg-dark-raised text-warm-700 dark:text-warm-200 shadow transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <button
               @click.stop="nextImage(bedroom)"
-              class="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 shadow transition-colors"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-white/70 dark:bg-dark-raised/70 hover:bg-white dark:hover:bg-dark-raised text-warm-700 dark:text-warm-200 shadow transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
             </button>
@@ -196,17 +196,17 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
         <!-- Content -->
         <div class="flex-1 p-4 md:p-5 flex flex-col">
           <div class="flex items-start justify-between">
-            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ bedroom.name }}</h4>
+            <h4 class="text-base font-semibold text-flag-black dark:text-warm-100">{{ bedroom.name }}</h4>
             <div class="flex items-center gap-2">
               <div v-if="bedroomPrices[bedroom.bedroom_id]" class="text-right">
-                <span class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ formatPrice(bedroomPrices[bedroom.bedroom_id]) }}</span>
-                <div v-if="numberOfNights > 0" class="text-xs text-gray-400">{{ formatPrice(bedroomPrices[bedroom.bedroom_id] / numberOfNights) }}/night</div>
+                <span class="text-base font-semibold text-flag-black dark:text-warm-100">{{ formatPrice(bedroomPrices[bedroom.bedroom_id]) }}</span>
+                <div v-if="numberOfNights > 0" class="text-xs text-warm-400">{{ formatPrice(bedroomPrices[bedroom.bedroom_id] / numberOfNights) }}/night</div>
               </div>
               <button v-if="authStore.isAdmin" @click="deleteBedroom(bedroom.bedroom_id)" class="text-red-400 hover:text-red-600 text-xs ml-2">Remove</button>
             </div>
           </div>
 
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ bedSummary(bedroom) }}</p>
+          <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">{{ bedSummary(bedroom) }}</p>
 
           <!-- Individual beds with claim buttons -->
           <div v-if="bedroom.beds?.length" class="mt-3 space-y-1.5">
@@ -215,26 +215,26 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
               :key="bed.bed_id"
               class="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
               :class="bed.assigned_user_id === authStore.activeUser?.user_id
-                ? 'bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800'
+                ? 'bg-trip-accent-light dark:bg-trip-accent/10 border border-trip-accent/30 dark:border-trip-accent/30'
                 : bed.assigned_user_id
-                  ? 'bg-gray-50 dark:bg-gray-800'
-                  : 'bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600'"
+                  ? 'bg-warm-50 dark:bg-dark-raised'
+                  : 'bg-warm-50 dark:bg-dark-raised border border-dashed border-warm-300 dark:border-dark-border'"
             >
               <div class="flex items-center gap-2">
-                <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ bed.bed_type }} bed</span>
+                <span class="font-medium text-warm-700 dark:text-warm-300 capitalize">{{ bed.bed_type }} bed</span>
                 <span v-if="bed.assigned_user_id === authStore.activeUser?.user_id"
-                  class="text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium">
+                  class="text-xs bg-trip-accent-light dark:bg-trip-accent/20 text-trip-accent px-1.5 py-0.5 rounded font-medium">
                   Your Bed
                 </span>
                 <span v-else-if="bed.first_name"
-                  class="text-xs text-gray-500 dark:text-gray-400">
+                  class="text-xs text-warm-500 dark:text-warm-400">
                   {{ bed.first_name }} {{ bed.last_name }}
                 </span>
               </div>
               <button
                 v-if="!bed.assigned_user_id"
                 @click="claimBed(bed.bed_id)"
-                class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
+                class="text-xs font-medium text-trip-accent hover:text-trip-accent-hover px-2 py-1 rounded hover:bg-trip-accent-light dark:hover:bg-trip-accent/10 transition-colors"
               >
                 Claim
               </button>
@@ -271,7 +271,7 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
             <button
               v-if="!hasUserClaimed(bedroom)"
               @click="requestRoom(bedroom.bedroom_id)"
-              class="inline-flex items-center gap-1 border border-dashed border-indigo-300 dark:border-indigo-700 rounded-md px-2.5 py-1 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
+              class="inline-flex items-center gap-1 border border-dashed border-trip-accent/40 dark:border-trip-accent/30 rounded-md px-2.5 py-1 text-sm text-trip-accent hover:bg-trip-accent-light dark:hover:bg-trip-accent/10 transition-colors"
             >
               + Request Room
             </button>
@@ -280,7 +280,7 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
           <div class="mt-auto pt-3 flex items-center gap-4">
             <!-- Admin: price adjustment slider -->
             <div v-if="authStore.isAdmin" class="flex items-center gap-2">
-              <label class="text-xs text-gray-400 whitespace-nowrap">Price adj:</label>
+              <label class="text-xs text-warm-400 whitespace-nowrap">Price adj:</label>
               <input
                 type="range"
                 min="-10"
@@ -288,16 +288,16 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
                 step="1"
                 :value="bedroom.price_share_adjustment || 0"
                 @change="updateAdjustment(bedroom, $event.target.value)"
-                class="w-24 h-1 accent-indigo-600"
+                class="w-24 h-1 accent-trip-accent"
               />
-              <span class="text-xs font-mono w-6 text-center" :class="(bedroom.price_share_adjustment || 0) > 0 ? 'text-red-500' : (bedroom.price_share_adjustment || 0) < 0 ? 'text-green-600' : 'text-gray-400'">
+              <span class="text-xs font-mono w-6 text-center" :class="(bedroom.price_share_adjustment || 0) > 0 ? 'text-red-500' : (bedroom.price_share_adjustment || 0) < 0 ? 'text-green-600' : 'text-warm-400'">
                 {{ (bedroom.price_share_adjustment || 0) > 0 ? '+' : '' }}{{ bedroom.price_share_adjustment || 0 }}
               </span>
             </div>
 
             <!-- Admin: add bed -->
             <div v-if="authStore.isAdmin">
-              <select @change="addBed(bedroom.bedroom_id, $event.target.value); $event.target.value = ''" class="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-500 dark:text-gray-400 dark:bg-gray-800">
+              <select @change="addBed(bedroom.bedroom_id, $event.target.value); $event.target.value = ''" class="text-xs border border-warm-300 dark:border-dark-border rounded px-2 py-1 text-warm-500 dark:text-warm-400 dark:bg-dark-raised">
                 <option value="">+ Add bed...</option>
                 <option v-for="bt in bedTypes" :key="bt" :value="bt">{{ bt }}</option>
               </select>
@@ -307,6 +307,6 @@ const bedTypes = ['king', 'queen', 'twin', 'full', 'sofa', 'bunk'];
       </div>
     </div>
 
-    <p v-else class="text-sm text-gray-500 dark:text-gray-400">No bedrooms added yet.</p>
+    <p v-else class="text-sm text-warm-500 dark:text-warm-400">No bedrooms added yet.</p>
   </div>
 </template>

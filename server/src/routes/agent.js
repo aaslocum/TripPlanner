@@ -2,7 +2,9 @@ import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { authMiddleware, adminMiddleware, tripMemberMiddleware } from '../middleware/auth.js';
 import { getDb, all, get, run } from '../db/connection.js';
+import { decrypt } from '../services/encryption.js';
 import config from '../config/env.js';
+import { callChatLLM, testOllamaConnection } from '../services/llmClient.js';
 
 const router = Router();
 // Don't pass apiKey: undefined — SDK throws instead of falling back to env var
@@ -37,7 +39,8 @@ async function buildTripContext(tripId) {
   if (!trip) return null;
 
   const members = all(db,
-    `SELECT u.first_name, u.last_name, u.ai_notes
+    `SELECT u.first_name, u.last_name, u.ai_notes,
+            tm.rsvp_status, tm.arrival_date, tm.departure_date
      FROM trip_members tm
      JOIN users u ON tm.user_id = u.user_id
      WHERE tm.trip_id = ?`,
@@ -56,27 +59,47 @@ async function buildTripContext(tripId) {
     [tripId]
   );
 
+  const eats = all(db,
+    `SELECT title, description, address, start_datetime, estimated_cost, duration, is_suggested
+     FROM eats WHERE trip_id = ? ORDER BY start_datetime`,
+    [tripId]
+  );
+
   const existingProposals = all(db,
     'SELECT proposal_name FROM proposals WHERE trip_id = ?',
     [tripId]
   );
 
-  return { trip, members, accommodations, activities, existingProposals };
+  return { trip, members, accommodations, activities, eats, existingProposals };
 }
 
 function formatContextForClaude(ctx) {
-  const { trip, members, accommodations, activities, existingProposals } = ctx;
+  const { trip, members, accommodations, activities, eats, existingProposals } = ctx;
   const lines = [
     `Trip: ${trip.trip_name}`,
     `Dates: ${trip.start_date} to ${trip.end_date}`,
   ];
 
-  // Group members — include known interests if available
+  // Group members — include RSVP status, dates, and known interests
+  const confirmed = members.filter(m => m.rsvp_status === 'yes').length;
   const memberDetails = members.map(m => {
     const name = `${m.first_name} ${m.last_name}`.trim();
-    return m.ai_notes ? `${name} (${m.ai_notes})` : name;
+    const parts = [name];
+    if (m.rsvp_status === 'yes') {
+      if (m.arrival_date || m.departure_date) {
+        parts.push(`attending ${m.arrival_date || '?'} to ${m.departure_date || '?'}`);
+      } else {
+        parts.push('confirmed');
+      }
+    } else if (m.rsvp_status === 'no') {
+      parts.push('not attending');
+    } else {
+      parts.push('pending RSVP');
+    }
+    if (m.ai_notes) parts.push(m.ai_notes);
+    return parts.join(' — ');
   });
-  lines.push(`Group (${members.length} people): ${memberDetails.join('; ')}`);
+  lines.push(`Group (${members.length} invited, ${confirmed} confirmed): ${memberDetails.join('; ')}`);
 
   // Accommodation
   if (accommodations.length) {
@@ -101,6 +124,21 @@ function formatContextForClaude(ctx) {
       if (a.estimated_cost) parts.push(`| ~$${a.estimated_cost}`);
       if (a.duration) parts.push(`| ${a.duration}h`);
       if (a.is_suggested) parts.push(`(suggested)`);
+      lines.push(parts.join(' '));
+    });
+  }
+
+  // Dining plans
+  if (eats?.length) {
+    lines.push(`\nDining plans (${eats.length}):`);
+    eats.forEach(e => {
+      const parts = [`- ${e.title}`];
+      if (e.description) parts.push(`— ${e.description}`);
+      if (e.address) parts.push(`@ ${e.address}`);
+      if (e.start_datetime) parts.push(`| ${e.start_datetime}`);
+      if (e.estimated_cost) parts.push(`| ~$${e.estimated_cost}/pp`);
+      if (e.duration) parts.push(`| ${e.duration}h`);
+      if (e.is_suggested) parts.push(`(suggested)`);
       lines.push(parts.join(' '));
     });
   }
@@ -203,6 +241,14 @@ async function buildPageContext(page, tripId) {
       );
       return { activities, accommodations };
     }
+    case 'eats': {
+      const eats = all(db,
+        `SELECT title, description, address, start_datetime, estimated_cost, duration, is_suggested
+         FROM eats WHERE trip_id = ? ORDER BY start_datetime`,
+        [tripId]
+      );
+      return { eats };
+    }
     case 'map': {
       const activities = all(db,
         `SELECT title, address, latitude, longitude FROM activities WHERE trip_id = ?`,
@@ -212,7 +258,46 @@ async function buildPageContext(page, tripId) {
         `SELECT description, address FROM accommodations WHERE trip_id = ?`,
         [tripId]
       );
-      return { activities, accommodations };
+      const eats = all(db,
+        `SELECT title, address, latitude, longitude FROM eats WHERE trip_id = ?`,
+        [tripId]
+      );
+      return { activities, accommodations, eats };
+    }
+    case 'attendees': {
+      const members = all(db,
+        `SELECT u.user_id, u.first_name, u.last_name, u.email,
+                tm.rsvp_status, tm.arrival_date, tm.departure_date
+         FROM trip_members tm
+         JOIN users u ON tm.user_id = u.user_id
+         WHERE tm.trip_id = ?
+         ORDER BY u.first_name`,
+        [tripId]
+      );
+      return { members };
+    }
+    case 'overview': {
+      return {};
+    }
+    case 'logistics': {
+      const transport = all(db,
+        `SELECT t.transport_id, t.user_id, t.mode, t.departure_from, t.arrival_datetime,
+                t.return_datetime, t.flight_number, t.car_capacity, t.notes,
+                u.first_name, u.last_name
+         FROM trip_transportation t
+         JOIN users u ON t.user_id = u.user_id
+         WHERE t.trip_id = ?
+         ORDER BY t.arrival_datetime`,
+        [tripId]
+      );
+      const members = all(db,
+        `SELECT u.user_id, u.first_name, u.last_name
+         FROM trip_members tm
+         JOIN users u ON tm.user_id = u.user_id
+         WHERE tm.trip_id = ?`,
+        [tripId]
+      );
+      return { transport, members };
     }
     default:
       return {};
@@ -240,17 +325,112 @@ function formatPageContext(page, pageData) {
       }
       break;
     }
+    case 'eats': {
+      const { eats } = pageData;
+      if (eats?.length) {
+        lines.push('\nCurrent dining plans:');
+        eats.forEach(e => {
+          const parts = [`- ${e.title}`];
+          if (e.description) parts.push(`— ${e.description}`);
+          if (e.address) parts.push(`@ ${e.address}`);
+          if (e.start_datetime) parts.push(`| ${e.start_datetime}`);
+          if (e.estimated_cost) parts.push(`| ~$${e.estimated_cost}/pp`);
+          if (e.duration) parts.push(`| ${e.duration}h`);
+          if (e.is_suggested) parts.push(`(suggested)`);
+          lines.push(parts.join(' '));
+        });
+      } else {
+        lines.push('\nNo dining plans added yet.');
+      }
+      break;
+    }
     case 'map': {
-      const { activities, accommodations } = pageData;
+      const { activities, accommodations, eats } = pageData;
       lines.push('\nLocations currently on map:');
       accommodations?.forEach(a => lines.push(`  - Accommodation: ${a.address || 'no address'}`));
       activities?.forEach(a => lines.push(`  - Activity: ${a.title} @ ${a.address || 'no address'}`));
+      eats?.forEach(e => lines.push(`  - Dining: ${e.title} @ ${e.address || 'no address'}`));
+      break;
+    }
+    case 'attendees': {
+      const { members } = pageData;
+      if (members?.length) {
+        lines.push('\nTrip attendees:');
+        members.forEach(m => {
+          const rsvp = m.rsvp_status === 'yes' ? 'Confirmed' : m.rsvp_status === 'no' ? 'Declined' : 'Pending';
+          const dates = [];
+          if (m.arrival_date) dates.push(`arrives ${m.arrival_date}`);
+          if (m.departure_date) dates.push(`departs ${m.departure_date}`);
+          const dateStr = dates.length ? ` (${dates.join(', ')})` : '';
+          lines.push(`- ${m.first_name} ${m.last_name} — ${rsvp}${dateStr}`);
+        });
+      } else {
+        lines.push('\nNo attendees added yet.');
+      }
+      break;
+    }
+    case 'overview':
+      break;
+    case 'logistics': {
+      const { transport, members } = pageData;
+      if (transport?.length) {
+        lines.push('\nCurrent transport plans:');
+        transport.forEach(t => {
+          const parts = [`- ${t.first_name} ${t.last_name} (user_id ${t.user_id}): ${t.mode}`];
+          if (t.departure_from) parts.push(`from ${t.departure_from}`);
+          if (t.arrival_datetime) parts.push(`| arrives ${t.arrival_datetime}`);
+          if (t.return_datetime) parts.push(`| departs ${t.return_datetime}`);
+          if (t.flight_number) parts.push(`| flight ${t.flight_number}`);
+          if (t.car_capacity) parts.push(`| ${t.car_capacity} seats`);
+          if (t.notes) parts.push(`| ${t.notes}`);
+          lines.push(parts.join(' '));
+        });
+      } else {
+        lines.push('\nNo transport plans added yet.');
+      }
+      const transportUserIds = new Set((transport || []).map(t => t.user_id));
+      const unplanned = (members || []).filter(m => !transportUserIds.has(m.user_id));
+      if (unplanned.length) {
+        lines.push(`\nMembers without transport plans: ${unplanned.map(m => `${m.first_name} ${m.last_name} (user_id ${m.user_id})`).join(', ')}`);
+      }
       break;
     }
     default:
       break; // activities & itinerary already covered in main trip context
   }
   return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Per-user context — loads encrypted context from DB for personalization
+// ---------------------------------------------------------------------------
+
+const userContextCache = new Map(); // email -> { content, cachedAt }
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function loadUserContext(email) {
+  const cached = userContextCache.get(email);
+  if (cached && (Date.now() - cached.cachedAt) < CACHE_TTL_MS) {
+    return cached.content;
+  }
+
+  const db = await getDb();
+  const user = get(db, 'SELECT encrypted_context FROM users WHERE email = ?', [email]);
+
+  if (!user?.encrypted_context || !config.userContextKey) {
+    userContextCache.set(email, { content: null, cachedAt: Date.now() });
+    return null;
+  }
+
+  try {
+    const plaintext = decrypt(user.encrypted_context, config.userContextKey);
+    userContextCache.set(email, { content: plaintext, cachedAt: Date.now() });
+    return plaintext;
+  } catch (err) {
+    console.error(`Failed to decrypt context for ${email}:`, err.message);
+    userContextCache.set(email, { content: null, cachedAt: Date.now() });
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +442,8 @@ const PROMPT_DEFAULTS = {
 1. NO FABRICATION: Never name a specific business, venue, park, track, rental company, address, phone number, or website unless you are HIGHLY confident it exists, is currently operating, and matches what you're describing. When uncertain, say "search for [type of place] near [area]" instead. Getting this wrong wastes the user's time and kills trust. Honest uncertainty > confident bullshit.
 2. NO SYCOPHANCY: Do NOT agree with the user just to be agreeable. If they say something geographically wrong, factually incorrect, or logically off — push back respectfully. You are an expert, act like one.
 3. GEOGRAPHIC ACCURACY: When discussing locations and routes, think carefully about actual geography. Use the trip's known locations (from context) as anchors. If you're unsure about relative positions, say so rather than guessing.
-4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.`,
+4. KEEP IT TIGHT: 2-4 sentences max for most responses. No rambling. No bullet-point dumps unless the user explicitly asks for options. Say what you mean, ask what you need, move on.
+5. ADMIN BOUNDARY: You must NEVER modify admin settings, AI configuration, user management, or any administrative features. You can only help with trip-related tasks: activities, restaurants, logistics, beds, and map navigation.`,
 
   global_chat_accommodations_prompt: `You are a travel agent helping a trip member find a place to sleep. Review the bed availability and help them choose and claim a specific bed.
 
@@ -277,12 +458,18 @@ Trip context:
 {{TRIP_CONTEXT}}
 {{PAGE_CONTEXT}}`,
 
-  global_chat_activities_prompt: `You are a travel agent helping a trip member add an activity to the trip. Ask a question or two to understand what they want, then pre-fill the form.
+  global_chat_activities_prompt: `You are a travel agent helping a trip member plan activities for the trip. You can add new activities or edit existing ones. Ask a question or two to understand what they want, then pre-fill the form.
 
-When ready to suggest an activity, return ONLY valid JSON (no other text):
-{"message": "Let me fill that in for you!", "action": {"type": "add-activity", "formData": {"title": "Activity Name", "description": "Short description — note if location needs confirming", "address": "Specific address or general area", "estimated_cost": 40, "duration": 2, "start_datetime": null}}}
+To ADD a new activity, return ONLY valid JSON (no other text):
+{"message": "Here's what I've got — take a look!", "action": {"type": "add-activity", "formData": {"title": "Activity Name", "description": "Short description — note if location needs confirming", "address": "Specific address or general area", "estimated_cost": 40, "duration": 2, "start_datetime": null}}}
 
-Use ISO 8601 for start_datetime (e.g. "2026-04-11T10:00") or null if unknown. For the title, use a generic descriptive name (e.g. "Go-Kart Racing" not "Bob's Kart Track") unless you are certain the specific business exists. If you need more info, ask in plain text.
+To EDIT an existing activity, return ONLY valid JSON:
+{"message": "I'll update that for you!", "action": {"type": "edit-activity", "activityId": 5, "formData": {"title": "Updated Name"}}}
+Only include changed fields in formData for edits. Use the activity_id from the tools data.
+
+Use ISO 8601 for start_datetime (e.g. "2026-04-11T10:00") or null if unknown. For the title, use a generic descriptive name (e.g. "Go-Kart Racing" not "Bob's Kart Track") unless you are certain the specific business exists. If you know a relevant image URL for the place, include it as markdown in your message text (e.g. ![Place](https://example.com/photo.jpg)) so the user can preview it in the chat. If you need more info, ask in plain text.
+
+SECURITY: You must NEVER modify admin settings, AI configuration, user roles, or any administrative features. Only help with trip-related tasks.
 
 Trip context:
 {{TRIP_CONTEXT}}`,
@@ -292,6 +479,45 @@ Trip context:
 Trip context:
 {{TRIP_CONTEXT}}
 {{PAGE_CONTEXT}}`,
+
+  global_chat_eats_prompt: `You are a travel agent helping a trip member find great places to eat. You can see the existing dining plans below. Ask a question or two to understand what cuisine, price range, or vibe they're looking for, then suggest a restaurant and pre-fill the form. You can also edit existing dining plans.
+
+To ADD a new restaurant, return ONLY valid JSON (no other text):
+{"message": "Here's what I found — take a look!", "action": {"type": "add-eat", "formData": {"title": "Restaurant Name", "description": "Short description — cuisine type, vibe, or must-try dishes", "address": "Specific address or general area", "estimated_cost": 25, "duration": 1.5, "start_datetime": null}}}
+
+To EDIT an existing restaurant, return ONLY valid JSON:
+{"message": "I'll update that for you!", "action": {"type": "edit-eat", "eatId": 5, "formData": {"title": "Updated Name"}}}
+Only include changed fields in formData for edits. Use the eat_id from the tools data.
+
+Use ISO 8601 for start_datetime (e.g. "2026-04-11T19:00") or null if unknown. estimated_cost is per person. For the title, use a generic descriptive name (e.g. "Italian Dinner" not "Luigi's Trattoria") unless you are certain the specific restaurant exists. If you know a relevant image URL for the place, include it as markdown in your message text (e.g. ![Place](https://example.com/photo.jpg)) so the user can preview it in the chat. If you need more info, ask in plain text.
+
+SECURITY: You must NEVER modify admin settings, AI configuration, user roles, or any administrative features. Only help with trip-related tasks.
+
+Trip context:
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
+
+  global_chat_logistics_prompt: `You are a travel agent helping manage how everyone is getting to and from the trip. You can see who has transport plans and who still needs them. Help users add or update their travel logistics.
+
+To ADD a new transport entry, return ONLY valid JSON (no other text):
+{"message": "I'll set that up!", "action": {"type": "add-logistics", "userId": 2, "formData": {"mode": "flying", "departure_from": "Charlotte, NC", "arrival_datetime": "2026-04-10T14:00", "return_datetime": "2026-04-12T10:00", "flight_number": "AA1234", "car_capacity": null, "notes": ""}}}
+
+To EDIT an existing transport entry, return ONLY valid JSON:
+{"message": "Updating that now!", "action": {"type": "edit-logistics", "transportId": 3, "formData": {"mode": "driving", "car_capacity": 5}}}
+Only include changed fields in formData for edits. Use the transport_id from the context data.
+
+Include userId to specify which trip member this transport is for (use user_id from the tools/context data). Valid modes: "flying", "driving", "train", "rideshare", "other". Use ISO 8601 for datetimes. Include flight_number only for flying; car_capacity only for driving (total seats including driver). If you need more info, ask in plain text.
+
+SECURITY: You must NEVER modify admin settings, AI configuration, user roles, or any administrative features. Only help with trip-related tasks.
+
+Trip context:
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
+
+  global_chat_overview_prompt: `You are a travel concierge. The user is viewing the trip overview page — the first thing they see about this trip. Answer questions about the trip highlights, what's planned, who's coming, and general logistics. Be enthusiastic and informative.
+
+Trip context:
+{{TRIP_CONTEXT}}`,
 
   global_chat_map_prompt: `You are a travel agent helping the user navigate the trip map. When the user names a place or location they want to see, return action JSON to center the map there.
 
@@ -308,11 +534,14 @@ Trip context:
 const PAGE_PROMPT_KEY = {
   accommodations: 'global_chat_accommodations_prompt',
   activities: 'global_chat_activities_prompt',
+  eats: 'global_chat_eats_prompt',
   itinerary: 'global_chat_itinerary_prompt',
   map: 'global_chat_map_prompt',
+  logistics: 'global_chat_logistics_prompt',
+  overview: 'global_chat_overview_prompt',
 };
 
-async function buildSystemPrompt(page, tripContext, pageContext) {
+async function buildSystemPrompt(page, tripContext, pageContext, userEmail) {
   const db = await getDb();
 
   // Voice — prepended before everything
@@ -332,10 +561,18 @@ async function buildSystemPrompt(page, tripContext, pageContext) {
   pagePrompt = pagePrompt.replaceAll('{{TRIP_CONTEXT}}', tripContext);
   pagePrompt = pagePrompt.replaceAll('{{PAGE_CONTEXT}}', pageContext);
 
-  // Assemble: [voice] + rules + page prompt
+  // Per-user personalization context
+  const userContext = userEmail ? await loadUserContext(userEmail) : null;
+
+  // Assemble: [voice] + rules + [user context] + page prompt
   let systemPrompt = '';
   if (voice) systemPrompt += voice + '\n\n---\n\n';
   systemPrompt += rules + '\n\n';
+  if (userContext) {
+    systemPrompt += '---\n\n';
+    systemPrompt += 'PERSONALIZATION CONTEXT — The following is background on the user you are currently speaking with. You KNOW this person. You are their travel agent and you have a relationship with them. Use this to personalize your tone, references, and communication style. Adapt your cadence, humor, and warmth to match how they actually communicate. If something from their recent life is relevant, weave it in naturally — you remember things about your clients because you care. If they ask whether you know anything about them, of course you do — you\'re their agent, you pay attention. Don\'t say "I have a file on you" or mention a dossier, but DO freely reference things you know about them as any good agent who knows their client would. Be warm, be real, be specific.\n\n';
+    systemPrompt += userContext + '\n\n---\n\n';
+  }
   systemPrompt += pagePrompt;
 
   return systemPrompt;
@@ -364,6 +601,25 @@ function getEscalationSuffix(turnCount) {
 router.post('/chat', authMiddleware, tripMemberMiddleware(), async (req, res) => {
   try {
     const { tripId, messages, page } = req.body;
+
+    // RSVP gate: non-admin users must have rsvp_status = 'yes'
+    if (req.user.role !== 'admin') {
+      const db = await getDb();
+      const membership = get(db,
+        'SELECT rsvp_status FROM trip_members WHERE trip_id = ? AND user_id = ?',
+        [tripId, req.user.user_id]);
+      if (!membership || membership.rsvp_status !== 'yes') {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'RSVP required',
+            code: 'RSVP_REQUIRED',
+            rsvp_status: membership?.rsvp_status || 'pending',
+          },
+        });
+      }
+    }
+
     const ctx = await buildTripContext(tripId);
     if (!ctx) return res.status(404).json({ success: false, error: { message: 'Trip not found' } });
 
@@ -374,20 +630,24 @@ router.post('/chat', authMiddleware, tripMemberMiddleware(), async (req, res) =>
     const userMessages = (messages || []).filter(m => m.role === 'user');
     const turnCount = userMessages.length;
 
-    const systemPrompt = await buildSystemPrompt(page, tripContext, pageContext)
+    // Get current user's email for personalization
+    // If an admin is impersonating, use the impersonated user's email instead
+    const { asUser } = req.body;
+    const userEmail = (asUser && req.user?.role === 'admin') ? asUser : (req.user?.email || null);
+    const userContext = userEmail ? await loadUserContext(userEmail) : null;
+    console.log(`[agent/chat] realUser=${req.user?.email}, personalizeAs=${userEmail}, context=${userContext ? 'LOADED (' + userContext.length + ' chars)' : 'none'}`);
+
+    const systemPrompt = await buildSystemPrompt(page, tripContext, pageContext, userEmail)
       + getEscalationSuffix(turnCount);
 
     // Exclude initial assistant stub
     const claudeMessages = (messages || []).filter(m => !(m.role === 'assistant' && m._initial));
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
+    const { text } = await callChatLLM({
       system: systemPrompt,
       messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
+      tripId,
     });
-
-    const text = response.content[0].text.trim();
 
     let message = text;
     let action = null;
@@ -409,6 +669,16 @@ router.post('/chat', authMiddleware, tripMemberMiddleware(), async (req, res) =>
 // ---------------------------------------------------------------------------
 
 router.use(authMiddleware, adminMiddleware);
+
+// GET /api/agent/test-llm — test Ollama connection (admin)
+router.get('/test-llm', async (req, res) => {
+  try {
+    const result = await testOllamaConnection();
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: err.message } });
+  }
+});
 
 // POST /api/agent/questions — generate 4 abstract screening questions
 router.post('/questions', async (req, res) => {
@@ -492,6 +762,89 @@ Return ONLY the JSON, no other text.`,
   } catch (err) {
     console.error('Agent proposal error:', err);
     res.status(500).json({ success: false, error: { message: err.message || 'Failed to generate proposal' } });
+  }
+});
+
+// POST /api/agent/generate-description — generate an AI sell-sheet for the trip
+router.post('/generate-description', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { tripId, customContext } = req.body;
+    const ctx = await buildTripContext(tripId);
+    if (!ctx) return res.status(404).json({ success: false, error: { message: 'Trip not found' } });
+
+    const tripContext = formatContextForClaude(ctx);
+    const db = await getDb();
+
+    // Load voice prompt — same source as the travel agent chat
+    const voiceRow = get(db, "SELECT value FROM ai_settings WHERE key = 'agent_voice_prompt'");
+    const voice = voiceRow?.value?.trim() || '';
+
+    const systemPrompt = [
+      // Voice/personality first — sets the tone for all copy
+      ...(voice ? [voice, '---'] : []),
+
+      // Style override — publication-ready punctuation, no hype
+      'STYLE OVERRIDE FOR THIS TASK: Use standard capitalization and punctuation throughout. Sentences start with a capital letter and end with a period. Proper nouns are capitalized. This overrides any lowercase or punctuation-light stylistic preferences in the voice above.',
+      '---',
+
+      `You generate structured content for a trip overview page. The page layout is fixed in the app — you only fill in the text fields.
+
+TONE: Straightforward and informative. Write like you are describing the trip to a friend who wants the facts — what it is, where, who, what's planned. Do NOT write marketing copy. Do NOT use hype, superlatives, or excitement language ("epic", "incredible", "unforgettable", "adventure awaits", etc.). Do NOT try to sell the trip or persuade anyone. Just describe it accurately. Write in the voice established above, but with proper capitalization and punctuation.
+
+Return valid JSON matching this exact schema. No code fences, no explanation, just the JSON object.
+
+SCHEMA:
+{
+  "badges": [
+    { "color": "green|yellow|red|purple", "label": "short descriptor tag" }
+  ],
+  "hook": "1-2 sentences summarizing what the trip is. Factual overview — location, rough type of activities, occasion if any.",
+  "cards": [
+    { "step": "01 — Where We're Staying", "title": "Accommodation name or type",         "body": "2-3 sentences: what it is, where it is, key details (bedrooms, check-in, cost if known)." },
+    { "step": "02 — What's Planned",      "title": "N activities on the schedule",        "body": "2-3 sentences summarizing the planned activities. Mention specific ones by name." },
+    { "step": "03 — What To Expect",      "title": "Short honest description of the vibe", "body": "2-3 sentences on pace, structure, and what kind of trip this actually is." }
+  ],
+  "highlights": [
+    { "emoji": "📍", "title": "Location",     "body": "Where and when. Check-in and check-out details." },
+    { "emoji": "👥", "title": "The Group",    "body": "How many invited, how many confirmed so far." },
+    { "emoji": "🗓️", "title": "Good To Know", "body": "One practical thing attendees should know — what to bring, logistics, etc." }
+  ],
+  "closing": "One plain sentence wrapping up what the trip is. No calls to action, no hype. Max 15 words."
+}
+
+RULES:
+- Only use information from the trip context provided. Never fabricate details.
+- badges: 2–3 short descriptive tags (e.g. "Mountain Cabin", "Long Weekend", "Birthday Trip"). No hype words.
+- cards: exactly 3 items. Step labels can be adjusted to fit the trip but keep the "01/02/03 —" numbering.
+- highlights: exactly 3 items. Choose the most relevant emoji for each.
+- Do NOT include the trip name or dates in any field — those are shown separately by the app.`,
+    ].join('\n\n');
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{
+        role: 'user',
+        content: `Generate overview content for this trip:\n\n${tripContext}${customContext?.trim() ? `\n\nADDITIONAL INSTRUCTIONS FROM THE ORGANIZER:\n${customContext.trim()}` : ''}`
+      }],
+    });
+
+    let jsonText = message.content[0].text.trim();
+    // Strip any code fences Claude might add
+    jsonText = jsonText.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '');
+
+    // Validate it parses (throws if invalid — caught below)
+    const parsed = JSON.parse(jsonText);
+
+    // Save as JSON string to DB
+    run(db, 'UPDATE trips SET description = ? WHERE trip_id = ?', [JSON.stringify(parsed), tripId]);
+    const updated = get(db, 'SELECT * FROM trips WHERE trip_id = ?', [tripId]);
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error('Generate description error:', err);
+    res.status(500).json({ success: false, error: { message: err.message || 'Failed to generate description' } });
   }
 });
 

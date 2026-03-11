@@ -22,6 +22,8 @@ import bedroomClaimRoutes from './routes/bedroomClaims.js';
 import proposalRoutes from './routes/proposals.js';
 import agentRoutes from './routes/agent.js';
 import aiSettingsRoutes from './routes/ai-settings.js';
+import transportationRoutes from './routes/transportation.js';
+import eatsRoutes from './routes/eats.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -63,6 +65,8 @@ app.use('/api/bedroom-claims', bedroomClaimRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/ai-settings', aiSettingsRoutes);
+app.use('/api/trips/:tripId/transportation', transportationRoutes);
+app.use('/api/eats', eatsRoutes);
 
 // Serve client in production
 if (config.nodeEnv === 'production') {

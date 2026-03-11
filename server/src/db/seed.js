@@ -31,6 +31,12 @@ async function seed() {
       [trip.trip_id, alex.user_id]);
   }
 
+  // Set Alex's RSVP to confirmed with trip dates
+  run(db,
+    `UPDATE trip_members SET rsvp_status = 'yes', arrival_date = '2026-04-10', departure_date = '2026-04-12'
+     WHERE trip_id = ? AND user_id = ?`,
+    [trip.trip_id, alex.user_id]);
+
   console.log(`  Admin user: Alex Slocum (ID: ${alex.user_id})`);
   console.log(`  Sample trip: Weekend Getaway (ID: ${trip.trip_id})`);
   console.log('Seeding complete.');

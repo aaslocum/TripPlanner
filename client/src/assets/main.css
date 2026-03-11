@@ -2,6 +2,43 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-flag-black: #1a1a1a;
+  --color-flag-green: #00843d;
+  --color-flag-green-hover: #006d32;
+  --color-flag-green-light: #e6f4ec;
+  --color-flag-red: #9c1a28;
+  --color-flag-red-hover: #891824;
+  --color-flag-red-light: #ce1126;
+  --color-flag-yellow: #ffd100;
+  --color-flag-purple: #800080;
+  --color-flag-purple-hover: #6d006d;
+  --color-flag-purple-light: #f5e6f5;
+  --color-trip-accent: #00843d;
+  --color-trip-accent-hover: #006d32;
+  --color-trip-accent-light: #e6f4ec;
+  --color-surface: #ffffff;
+  --color-surface-page: #f7f6f3;
+  --color-warm-50: #f7f6f3;
+  --color-warm-100: #f0efec;
+  --color-warm-200: #e2e1dd;
+  --color-warm-300: #c8c7c3;
+  --color-warm-400: #a3a29e;
+  --color-warm-500: #7a7975;
+  --color-warm-600: #5c5b58;
+  --color-warm-700: #3f3e3b;
+  --color-warm-800: #2a2927;
+  --color-warm-900: #1a1a1a;
+  --color-dark-bg: #121212;
+  --color-dark-surface: #1e1e1e;
+  --color-dark-raised: #2a2a2a;
+  --color-dark-border: #3a3a3a;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
+}
+
+html { font-family: var(--font-body); }
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

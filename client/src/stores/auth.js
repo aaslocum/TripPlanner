@@ -29,21 +29,14 @@ export const useAuthStore = defineStore('auth', {
     },
     async initialize() {
       if (this.initialized) return;
-      try {
-        // Try fetching current user (works in bypass mode without token)
-        const { data } = await apiClient.get('/auth/me');
-        this.user = data.data;
-      } catch {
-        // Try dev-login endpoint
+      if (this.token) {
         try {
-          const { data } = await apiClient.get('/auth/dev-login');
-          if (data.success) {
-            this.token = data.data.token;
-            localStorage.setItem('token', data.data.token);
-            this.user = data.data.user;
-          }
+          const { data } = await apiClient.get('/auth/me');
+          this.user = data.data;
         } catch {
           this.user = null;
+          this.token = null;
+          localStorage.removeItem('token');
         }
       }
       this.initialized = true;

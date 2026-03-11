@@ -52,6 +52,19 @@ export const useTripStore = defineStore('trip', {
         this.selectedTripId = this.trips[0]?.trip_id || null;
       }
     },
+
+    async fetchAllTrips() {
+      const { data } = await apiClient.get('/trips/all');
+      return data.data;
+    },
+
+    async generateDescription(tripId, customContext = '') {
+      const { data } = await apiClient.post('/agent/generate-description', { tripId, customContext });
+      // Update local trip data if it exists in the array
+      const index = this.trips.findIndex(t => t.trip_id === tripId);
+      if (index !== -1) this.trips[index] = data.data;
+      return data.data;
+    },
   },
 
   persist: {

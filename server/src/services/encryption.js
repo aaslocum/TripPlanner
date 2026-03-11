@@ -7,15 +7,14 @@ const IV_LENGTH = 12;
 const SALT_LENGTH = 32;
 const ALGORITHM = 'aes-256-gcm';
 
-function deriveKey(salt) {
-  return crypto.pbkdf2Sync(
-    config.budgetMasterKey, salt, ITERATIONS, KEY_LENGTH, 'sha512'
-  );
+function deriveKeyWithMaster(masterKey, salt) {
+  return crypto.pbkdf2Sync(masterKey, salt, ITERATIONS, KEY_LENGTH, 'sha512');
 }
 
-export function encryptBudget(plaintext) {
+// Generic encrypt/decrypt — accept any master key
+export function encrypt(plaintext, masterKey) {
   const salt = crypto.randomBytes(SALT_LENGTH);
-  const key = deriveKey(salt);
+  const key = deriveKeyWithMaster(masterKey, salt);
   const iv = crypto.randomBytes(IV_LENGTH);
 
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -31,11 +30,11 @@ export function encryptBudget(plaintext) {
   });
 }
 
-export function decryptBudget(encryptedJson) {
+export function decrypt(encryptedJson, masterKey) {
   const { c, iv, s, t } = JSON.parse(encryptedJson);
 
   const salt = Buffer.from(s, 'base64');
-  const key = deriveKey(salt);
+  const key = deriveKeyWithMaster(masterKey, salt);
   const ivBuf = Buffer.from(iv, 'base64');
   const authTag = Buffer.from(t, 'base64');
 
@@ -45,4 +44,13 @@ export function decryptBudget(encryptedJson) {
   let plaintext = decipher.update(c, 'base64', 'utf8');
   plaintext += decipher.final('utf8');
   return plaintext;
+}
+
+// Budget-specific wrappers — delegates to generic with budget master key
+export function encryptBudget(plaintext) {
+  return encrypt(plaintext, config.budgetMasterKey);
+}
+
+export function decryptBudget(encryptedJson) {
+  return decrypt(encryptedJson, config.budgetMasterKey);
 }
