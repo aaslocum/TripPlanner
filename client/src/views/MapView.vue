@@ -18,8 +18,9 @@ let map = null;
 let markers = [];
 let infoWindow = null;
 
-function makeInfoContent(title, address, typeLabel, color) {
-  return `<div style="padding:4px 2px;min-width:140px">
+function makeInfoContent(title, address, typeLabel, color, imageUrl) {
+  return `<div style="padding:4px 2px;min-width:180px;max-width:260px">
+    ${imageUrl ? `<img src="${imageUrl}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:6px" />` : ''}
     <div style="font-weight:600;font-size:14px;color:#111">${title}</div>
     ${address ? `<div style="font-size:12px;color:#555;margin-top:3px">${address}</div>` : ''}
     <div style="font-size:11px;color:${color};margin-top:3px;font-weight:500">${typeLabel}</div>
@@ -65,10 +66,10 @@ async function loadMap() {
     const focusLat = route.query.lat ? parseFloat(route.query.lat) : null;
     const focusLng = route.query.lng ? parseFloat(route.query.lng) : null;
 
-    function addMarkerWithInfo(pos, title, address, typeLabel, color, pinOpts) {
+    function addMarkerWithInfo(pos, title, address, typeLabel, color, pinOpts, imageUrl) {
       const pin = new PinElement(pinOpts);
       const marker = new AdvancedMarkerElement({ map, position: pos, title, content: pin.element });
-      const content = makeInfoContent(title, address || '', typeLabel, color);
+      const content = makeInfoContent(title, address || '', typeLabel, color, imageUrl);
 
       marker.addEventListener('click', () => {
         infoWindow.close();
@@ -108,7 +109,8 @@ async function loadMap() {
             acc.address,
             'Accommodation',
             staysC.accent,
-            { background: staysC.accent, borderColor: staysC.hover, glyphColor: '#fff' }
+            { background: staysC.accent, borderColor: staysC.hover, glyphColor: '#fff' },
+            acc.image_url
           );
           hasPoints = true;
         }
@@ -132,7 +134,8 @@ async function loadMap() {
         }
         if (pos) {
           addMarkerWithInfo(pos, act.title, act.address, 'Activity', activitiesC.accent,
-            { background: activitiesC.accent, borderColor: activitiesC.hover, glyphColor: '#fff' });
+            { background: activitiesC.accent, borderColor: activitiesC.hover, glyphColor: '#fff' },
+            act.image_url);
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }
@@ -155,7 +158,8 @@ async function loadMap() {
         }
         if (pos) {
           addMarkerWithInfo(pos, eat.title, eat.address, 'Dining', eatsC.accent,
-            { background: eatsC.accent, borderColor: eatsC.hover, glyphColor: '#fff' });
+            { background: eatsC.accent, borderColor: eatsC.hover, glyphColor: '#fff' },
+            eat.image_url);
           hasPoints = true;
         }
       } catch { /* skip failed geocodes */ }

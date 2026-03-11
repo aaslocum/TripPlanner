@@ -11,6 +11,12 @@ router.get('/trip/:tripId', async (req, res) => {
   const accommodations = all(db,
     'SELECT * FROM accommodations WHERE trip_id = ? ORDER BY check_in_datetime',
     [req.params.tripId]);
+  for (const acc of accommodations) {
+    const img = get(db,
+      'SELECT image_url FROM accommodation_images WHERE accommodation_id = ? ORDER BY sort_order ASC LIMIT 1',
+      [acc.accommodation_id]);
+    acc.image_url = img ? img.image_url : null;
+  }
   res.json({ success: true, data: accommodations });
 });
 
