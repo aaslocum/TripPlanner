@@ -266,22 +266,22 @@ onMounted(fetchItinerary);
     <h2 class="text-2xl font-display font-black uppercase tracking-wide text-flag-black dark:text-warm-100 mb-5">Itinerary</h2>
 
     <!-- ===== Day Tabs ===== -->
-    <div class="flex items-end gap-3 overflow-x-auto scrollbar-hide border-b border-warm-200 dark:border-dark-border mb-6">
+    <div class="flex items-end gap-1 sm:gap-3 overflow-x-auto scrollbar-hide border-b border-warm-200 dark:border-dark-border mb-6">
       <button
         v-for="date in allDates"
         :key="date"
         @click="selectedDate = date"
-        class="relative flex flex-col items-center px-5 py-2.5 shrink-0 transition-colors border-b-2 -mb-px"
+        class="relative flex flex-col items-center px-2.5 sm:px-5 py-2 sm:py-2.5 min-w-0 transition-colors border-b-2 -mb-px"
         :class="selectedDate === date
           ? 'border-trip-accent text-trip-accent dark:text-trip-accent'
           : 'border-transparent text-warm-400 dark:text-warm-500 hover:text-warm-700 dark:hover:text-warm-400'"
       >
-        <span class="text-[10px] uppercase tracking-widest font-semibold"
+        <span class="text-[10px] uppercase tracking-wider sm:tracking-widest font-semibold"
               :class="selectedDate === date ? 'text-trip-accent dark:text-trip-accent' : ''">
           {{ formatTabDay(date) }}
         </span>
         <span class="text-sm font-semibold mt-0.5">{{ formatTabDate(date) }}</span>
-        <span v-if="attendanceForDate(date)" class="text-[9px] text-warm-400 dark:text-warm-500 mt-0.5">
+        <span v-if="attendanceForDate(date)" class="hidden sm:inline text-[9px] text-warm-400 dark:text-warm-500 mt-0.5">
           {{ attendanceForDate(date) }} attending
         </span>
         <!-- event count dot -->
@@ -298,7 +298,7 @@ onMounted(fetchItinerary);
       <button
         v-if="hasUnscheduled"
         @click="selectedDate = 'Unscheduled'"
-        class="flex items-center gap-1.5 px-5 py-2.5 shrink-0 text-sm font-medium border-b-2 -mb-px transition-colors"
+        class="flex items-center gap-1.5 px-2.5 sm:px-5 py-2 sm:py-2.5 shrink-0 text-sm font-medium border-b-2 -mb-px transition-colors"
         :class="selectedDate === 'Unscheduled'
           ? 'border-amber-500 text-amber-700 dark:text-amber-400'
           : 'border-transparent text-warm-400 dark:text-warm-500 hover:text-warm-700 dark:hover:text-warm-400'"
