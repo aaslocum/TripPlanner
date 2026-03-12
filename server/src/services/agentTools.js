@@ -210,6 +210,18 @@ export const AGENT_TOOLS = [
     description: 'Get all previously generated trip proposals with their full text, places, and estimated costs.',
     input_schema: { type: 'object', properties: {} },
   },
+
+  // ── Gear ────────────────────────────────────────────────────────────────
+  {
+    name: 'get_gear_items',
+    description: 'Get all gear/supply items for the trip with who has claimed what quantities. Shows what still needs to be brought.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_gear_status',
+    description: 'Get a summary of gear fulfillment: how many items are fully claimed, partially claimed, or unclaimed.',
+    input_schema: { type: 'object', properties: {} },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -247,6 +259,8 @@ export async function executeTool(toolName, tripId, input = {}) {
     case 'get_transportation':        return getTransportation(db, tripId);
     case 'get_carpool_opportunities': return getCarpoolOpportunities(db, tripId);
     case 'get_proposals':             return getProposals(db, tripId);
+    case 'get_gear_items':            return getGearItems(db, tripId);
+    case 'get_gear_status':           return getGearStatus(db, tripId);
     default: return { error: `Unknown tool: ${toolName}` };
   }
 }
@@ -687,4 +701,57 @@ function getProposals(db, tripId) {
      FROM proposals WHERE trip_id = ?
      ORDER BY created_at DESC`,
     [tripId]);
+}
+
+function getGearItems(db, tripId) {
+  const items = all(db,
+    `SELECT gi.item_id, gi.description, gi.notes, gi.quantity,
+            u.first_name || ' ' || u.last_name AS created_by_name
+     FROM gear_items gi
+     LEFT JOIN users u ON gi.created_by = u.user_id
+     WHERE gi.trip_id = ?
+     ORDER BY gi.created_at DESC`,
+    [tripId]);
+
+  for (const item of items) {
+    item.claims = all(db,
+      `SELECT u.first_name || ' ' || u.last_name AS name, gc.quantity
+       FROM gear_claims gc JOIN users u ON gc.user_id = u.user_id
+       WHERE gc.item_id = ?
+       ORDER BY gc.created_at`,
+      [item.item_id]);
+    item.total_claimed = item.claims.reduce((s, c) => s + c.quantity, 0);
+    item.remaining = item.quantity - item.total_claimed;
+    item.status = item.remaining <= 0 ? 'fulfilled' : item.total_claimed > 0 ? 'partial' : 'unclaimed';
+  }
+  return items;
+}
+
+function getGearStatus(db, tripId) {
+  const items = all(db,
+    `SELECT gi.item_id, gi.description, gi.quantity,
+            COALESCE(SUM(gc.quantity), 0) AS total_claimed
+     FROM gear_items gi
+     LEFT JOIN gear_claims gc ON gi.item_id = gc.item_id
+     WHERE gi.trip_id = ?
+     GROUP BY gi.item_id`,
+    [tripId]);
+
+  const fulfilled = items.filter(i => i.total_claimed >= i.quantity);
+  const partial = items.filter(i => i.total_claimed > 0 && i.total_claimed < i.quantity);
+  const unclaimed = items.filter(i => i.total_claimed === 0);
+
+  return {
+    total_items: items.length,
+    fulfilled_count: fulfilled.length,
+    partial_count: partial.length,
+    unclaimed_count: unclaimed.length,
+    fulfilled: fulfilled.map(i => i.description),
+    needs_attention: [...partial, ...unclaimed].map(i => ({
+      description: i.description,
+      needed: i.quantity,
+      claimed: i.total_claimed,
+      remaining: i.quantity - i.total_claimed,
+    })),
+  };
 }

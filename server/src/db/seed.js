@@ -37,8 +37,55 @@ async function seed() {
      WHERE trip_id = ? AND user_id = ?`,
     [trip.trip_id, alex.user_id]);
 
+  // Seed gear items
+  let gearItem1 = get(db, "SELECT item_id FROM gear_items WHERE trip_id = ? AND description = ?",
+    [trip.trip_id, 'Large Cooler']);
+  if (!gearItem1) {
+    const r = run(db,
+      `INSERT INTO gear_items (trip_id, description, notes, quantity, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [trip.trip_id, 'Large Cooler', 'Big enough for drinks and snacks for the group', 2, alex.user_id]);
+    gearItem1 = { item_id: r.lastInsertRowid };
+  }
+
+  let gearItem2 = get(db, "SELECT item_id FROM gear_items WHERE trip_id = ? AND description = ?",
+    [trip.trip_id, 'Bluetooth Speaker']);
+  if (!gearItem2) {
+    const r = run(db,
+      `INSERT INTO gear_items (trip_id, description, notes, quantity, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [trip.trip_id, 'Bluetooth Speaker', 'Waterproof preferred for outdoor use', 1, alex.user_id]);
+    gearItem2 = { item_id: r.lastInsertRowid };
+  }
+
+  let gearItem3 = get(db, "SELECT item_id FROM gear_items WHERE trip_id = ? AND description = ?",
+    [trip.trip_id, 'Sunscreen SPF 50']);
+  if (!gearItem3) {
+    const r = run(db,
+      `INSERT INTO gear_items (trip_id, description, notes, quantity, created_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [trip.trip_id, 'Sunscreen SPF 50', null, 3, alex.user_id]);
+    gearItem3 = { item_id: r.lastInsertRowid };
+  }
+
+  // Seed gear claims (Alex claims 1 cooler and the speaker)
+  const gearClaim1 = get(db, 'SELECT claim_id FROM gear_claims WHERE item_id = ? AND user_id = ?',
+    [gearItem1.item_id, alex.user_id]);
+  if (!gearClaim1) {
+    run(db, 'INSERT INTO gear_claims (item_id, user_id, quantity) VALUES (?, ?, ?)',
+      [gearItem1.item_id, alex.user_id, 1]);
+  }
+
+  const gearClaim2 = get(db, 'SELECT claim_id FROM gear_claims WHERE item_id = ? AND user_id = ?',
+    [gearItem2.item_id, alex.user_id]);
+  if (!gearClaim2) {
+    run(db, 'INSERT INTO gear_claims (item_id, user_id, quantity) VALUES (?, ?, ?)',
+      [gearItem2.item_id, alex.user_id, 1]);
+  }
+
   console.log(`  Admin user: Alex Slocum (ID: ${alex.user_id})`);
   console.log(`  Sample trip: Weekend Getaway (ID: ${trip.trip_id})`);
+  console.log(`  Gear items: 3 seeded, 2 claims`);
   console.log('Seeding complete.');
 
   saveDb();

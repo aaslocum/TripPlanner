@@ -142,7 +142,8 @@
       "Bash(git rm --cached server/data/tripplanner.db)",
       "Bash(powershell -Command \"Set-Content -Path ''C:\\\\Users\\\\alxsl\\\\TripPlanner\\\\.gitignore'' -Encoding UTF8 -Value @'':*)",
       "Bash(cross-env AUTH_BYPASS=true node src/index.js)",
-      "Bash(AUTH_BYPASS=true node src/index.js)"
+      "Bash(AUTH_BYPASS=true node src/index.js)",
+      "Bash(pkill -f \"node.*server\")"
     ]
   }
 }

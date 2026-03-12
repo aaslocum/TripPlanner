@@ -90,6 +90,12 @@ const routes = [
     component: () => import('../views/LogisticsView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/gear',
+    name: 'Gear',
+    component: () => import('../views/GearView.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

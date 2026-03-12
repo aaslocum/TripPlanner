@@ -24,6 +24,7 @@ import agentRoutes from './routes/agent.js';
 import aiSettingsRoutes from './routes/ai-settings.js';
 import transportationRoutes from './routes/transportation.js';
 import eatsRoutes from './routes/eats.js';
+import gearRoutes from './routes/gear.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -67,6 +68,7 @@ app.use('/api/agent', agentRoutes);
 app.use('/api/ai-settings', aiSettingsRoutes);
 app.use('/api/trips/:tripId/transportation', transportationRoutes);
 app.use('/api/eats', eatsRoutes);
+app.use('/api/gear', gearRoutes);
 
 // Serve client in production
 if (config.nodeEnv === 'production') {

@@ -21,6 +21,7 @@ const navItems = [
   { path: '/itinerary', label: 'Itinerary', icon: 'list' },
   { path: '/map', label: 'Map', icon: 'map' },
   { path: '/logistics', label: 'Logistics', icon: 'logistics' },
+  { path: '/gear', label: 'Gear', icon: 'gear' },
 ];
 
 // Category color classes for active nav items (use dynamic CSS variables)
@@ -112,6 +113,9 @@ function logout() {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 16l1-2h6l2-3h4l4 2 2 1 1 2H1z" />
           <circle cx="7" cy="18" r="2" stroke-width="2"/>
           <circle cx="17" cy="18" r="2" stroke-width="2"/>
+        </svg>
+        <svg v-if="item.icon === 'gear'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
         {{ item.label }}
       </router-link>
@@ -270,6 +274,9 @@ function logout() {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 16l1-2h6l2-3h4l4 2 2 1 1 2H1z" />
                 <circle cx="7" cy="18" r="2" stroke-width="2"/>
                 <circle cx="17" cy="18" r="2" stroke-width="2"/>
+              </svg>
+              <svg v-if="item.icon === 'gear'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
               {{ item.label }}
             </router-link>

@@ -70,11 +70,21 @@ async function buildTripContext(tripId) {
     [tripId]
   );
 
-  return { trip, members, accommodations, activities, eats, existingProposals };
+  const gearItems = all(db,
+    `SELECT gi.description, gi.quantity,
+            COALESCE(SUM(gc.quantity), 0) AS total_claimed
+     FROM gear_items gi
+     LEFT JOIN gear_claims gc ON gi.item_id = gc.item_id
+     WHERE gi.trip_id = ?
+     GROUP BY gi.item_id`,
+    [tripId]
+  );
+
+  return { trip, members, accommodations, activities, eats, existingProposals, gearItems };
 }
 
 function formatContextForClaude(ctx) {
-  const { trip, members, accommodations, activities, eats, existingProposals } = ctx;
+  const { trip, members, accommodations, activities, eats, existingProposals, gearItems } = ctx;
   const lines = [
     `Trip: ${trip.trip_name}`,
     `Dates: ${trip.start_date} to ${trip.end_date}`,
@@ -145,6 +155,15 @@ function formatContextForClaude(ctx) {
 
   if (existingProposals.length) {
     lines.push(`\nAlready proposed: ${existingProposals.map(p => p.proposal_name).join(', ')}`);
+  }
+
+  if (gearItems?.length) {
+    const unclaimed = gearItems.filter(g => g.total_claimed < g.quantity);
+    lines.push(`\nGear list (${gearItems.length} items, ${unclaimed.length} still need volunteers):`);
+    gearItems.forEach(g => {
+      const status = g.total_claimed >= g.quantity ? 'COVERED' : `${g.total_claimed}/${g.quantity} claimed`;
+      lines.push(`- ${g.description}: ${status}`);
+    });
   }
 
   return lines.join('\n');
@@ -306,6 +325,24 @@ async function buildPageContext(page, tripId) {
       );
       return { transport, members };
     }
+    case 'gear': {
+      const gearItems = all(db,
+        `SELECT gi.*, u.first_name || ' ' || u.last_name AS creator_name
+         FROM gear_items gi
+         LEFT JOIN users u ON gi.created_by = u.user_id
+         WHERE gi.trip_id = ?
+         ORDER BY gi.created_at DESC`,
+        [tripId]
+      );
+      for (const item of gearItems) {
+        item.claims = all(db,
+          `SELECT u.first_name || ' ' || u.last_name AS name, gc.quantity
+           FROM gear_claims gc JOIN users u ON gc.user_id = u.user_id
+           WHERE gc.item_id = ?`,
+          [item.item_id]);
+      }
+      return { gearItems };
+    }
     default:
       return {};
   }
@@ -405,6 +442,22 @@ function formatPageContext(page, pageData) {
       const unplanned = (members || []).filter(m => !transportUserIds.has(m.user_id));
       if (unplanned.length) {
         lines.push(`\nMembers without transport plans: ${unplanned.map(m => `${m.first_name} ${m.last_name} (user_id ${m.user_id})`).join(', ')}`);
+      }
+      break;
+    }
+    case 'gear': {
+      const { gearItems } = pageData;
+      if (gearItems?.length) {
+        lines.push('\nGear/supply list:');
+        gearItems.forEach(g => {
+          const claimed = g.claims?.reduce((s, c) => s + c.quantity, 0) || 0;
+          const status = claimed >= g.quantity ? 'FULLY CLAIMED' : `${claimed}/${g.quantity} claimed`;
+          const claimers = g.claims?.length ? ` (by ${g.claims.map(c => `${c.name}: ${c.quantity}`).join(', ')})` : '';
+          lines.push(`- ${g.description}: need ${g.quantity}, ${status}${claimers}`);
+          if (g.notes) lines.push(`  Notes: ${g.notes}`);
+        });
+      } else {
+        lines.push('\nNo gear items added yet.');
       }
       break;
     }
@@ -532,6 +585,14 @@ Trip context:
 Trip context:
 {{TRIP_CONTEXT}}`,
 
+  global_chat_gear_prompt: `You are a travel agent helping a trip member manage the group gear/supply list. You can see what items are needed and who has claimed what.
+
+Help users understand what still needs to be brought, suggest items they might need, or answer questions about what's covered. You can view gear status but cannot directly modify the list — direct users to use the page controls to add items or claim gear.
+
+Trip context:
+{{TRIP_CONTEXT}}
+{{PAGE_CONTEXT}}`,
+
   global_chat_map_prompt: `You are a travel agent helping the user navigate the trip map. When the user names a place or location they want to see, return action JSON to center the map there.
 
 Return ONLY valid JSON (no other text) when centering the map:
@@ -552,6 +613,7 @@ const PAGE_PROMPT_KEY = {
   map: 'global_chat_map_prompt',
   logistics: 'global_chat_logistics_prompt',
   overview: 'global_chat_overview_prompt',
+  gear: 'global_chat_gear_prompt',
 };
 
 async function buildSystemPrompt(page, tripContext, pageContext, userEmail) {
